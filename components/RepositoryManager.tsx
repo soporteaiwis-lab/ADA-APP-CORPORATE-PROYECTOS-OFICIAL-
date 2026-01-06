@@ -724,14 +724,14 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                     </div>
                 )}
 
-                {/* TOKEN INPUT MODAL */}
+                {/* TOKEN INPUT MODAL - IMPROVED FOR FIXING */}
                 {showTokenInput && (
                     <div className="absolute inset-0 z-[100] bg-slate-900/90 flex items-center justify-center p-6 animate-fade-in">
                         <div className="bg-white rounded-xl w-full max-w-sm p-6 shadow-2xl">
                             <div className="text-center mb-4">
                                 <Icon name="fab fa-github" className="text-4xl text-slate-800 mb-2" />
-                                <h3 className="font-bold text-lg text-slate-800">Falta Token de GitHub</h3>
-                                <p className="text-sm text-slate-500">No se detectó el token en la configuración global.</p>
+                                <h3 className="font-bold text-lg text-slate-800">Configurar GitHub Token</h3>
+                                <p className="text-sm text-slate-500">Ingresa tu Personal Access Token (Classic) con permisos de 'repo'.</p>
                             </div>
                             <input 
                                 type="password" 
@@ -774,7 +774,24 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                         </div>
                         <h3 className="text-lg font-bold text-slate-900 mb-2">Error de Sincronización</h3>
                         <p className="text-red-500 text-sm font-medium mb-6 bg-red-50 p-3 rounded border border-red-100">{uploadStatusMsg || creationLog}</p>
-                        <button onClick={() => { setUploadState('idle'); setCreationStatus('idle'); }} className="px-6 py-2 bg-slate-800 text-white rounded-lg font-bold">Volver</button>
+                        
+                        <div className="flex gap-3 justify-center">
+                            <button onClick={() => { setUploadState('idle'); setCreationStatus('idle'); }} className="px-6 py-2 bg-slate-200 text-slate-700 rounded-lg font-bold hover:bg-slate-300">Volver</button>
+                            
+                            {/* New: Button to Fix Token Error */}
+                            {(uploadStatusMsg?.toLowerCase().includes('token') || uploadStatusMsg?.toLowerCase().includes('github') || uploadStatusMsg?.includes('401') || creationLog?.toLowerCase().includes('token')) && (
+                                 <button 
+                                    onClick={() => { 
+                                        setUploadState('idle'); 
+                                        setCreationStatus('idle');
+                                        setShowTokenInput(true);
+                                    }} 
+                                    className="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 flex items-center gap-2"
+                                >
+                                    <Icon name="fab fa-github" /> Cambiar Token
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
 
