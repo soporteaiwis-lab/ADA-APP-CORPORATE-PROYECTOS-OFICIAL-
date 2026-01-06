@@ -33,15 +33,13 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
   const [viewMode, setViewMode] = useState<'list' | 'add'>('list');
   
   // --- GITHUB TOKEN LOGIC (RESTORED TO CLASSIC) ---
-  // We read directly from the key used in Dashboard to avoid sync issues
   const getStoredGithubToken = () => {
-      // Prioritize the Dashboard Key - UPDATED TO ADA KEY
       return localStorage.getItem('ada_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN || '';
   };
 
   const [githubToken, setGithubToken] = useState(getStoredGithubToken());
   const [showTokenInput, setShowTokenInput] = useState(false);
-  const [showConfigHint, setShowConfigHint] = useState(false); // New hint for general config
+  const [showConfigHint, setShowConfigHint] = useState(false);
 
   // Drive Token State
   const [driveToken, setDriveToken] = useState<string>('');
@@ -99,7 +97,6 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
             return;
           }
           try {
-             // Wrap in try-catch for immediate errors
              const client = google.accounts.oauth2.initTokenClient({
                   client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
                   scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
@@ -116,11 +113,7 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                       setShowConfigHint(true);
                   }
               });
-              
-              // This triggers the popup. If origin is bad, it will fail in the popup, 
-              // but sometimes doesn't throw JS error here.
               client.requestAccessToken();
-              
           } catch (e) {
               reject(e);
               setShowConfigHint(true);
@@ -194,15 +187,14 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
   };
 
   const handlePickerUp = async (index: number) => {
-      const target = pickerBreadcrumb[index];
-      const newBreadcrumb = pickerBreadcrumb.slice(0, index + 1);
+      const folder = pickerBreadcrumb[index];
       setPickerLoading(true);
       try {
           const token = await authenticateDrive();
-          const items = await fetchDriveFolders(target.id, token);
+          const items = await fetchDriveFolders(folder.id, token);
           setPickerItems(items);
-          setPickerCurrentFolder(target);
-          setPickerBreadcrumb(newBreadcrumb);
+          setPickerCurrentFolder(folder);
+          setPickerBreadcrumb(pickerBreadcrumb.slice(0, index + 1));
       } catch (e) { console.error(e); } finally { setPickerLoading(false); }
   };
 
@@ -228,7 +220,6 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
           setUploadCurrentFolder({ id: rootId, name: repo.alias });
           setUploadBreadcrumb([{ id: rootId, name: repo.alias }]);
       } catch (e: any) {
-          // If auth fails, show alert and set config hint
           alert("Error de Acceso: " + e);
           setIsUploadBrowserOpen(false);
           setShowConfigHint(true);
@@ -249,15 +240,14 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
   };
 
   const handleUploadNavigateUp = async (index: number) => {
-      const target = uploadBreadcrumb[index];
-      const newBreadcrumb = uploadBreadcrumb.slice(0, index + 1);
+      const folder = uploadBreadcrumb[index];
       setUploadBrowserLoading(true);
       try {
           const token = await authenticateDrive();
-          const items = await fetchDriveFolders(target.id, token);
+          const items = await fetchDriveFolders(folder.id, token);
           setUploadBrowserItems(items);
-          setUploadCurrentFolder(target);
-          setUploadBreadcrumb(newBreadcrumb);
+          setUploadCurrentFolder(folder);
+          setUploadBreadcrumb(uploadBreadcrumb.slice(0, index + 1));
       } catch (e) { console.error(e); } finally { setUploadBrowserLoading(false); }
   };
 
@@ -332,22 +322,17 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
       const repo = project.repositories?.find(r => r.id === repoId);
       if (!repo) return;
 
-      // GITHUB FLOW (Classic)
       if (activeTab === 'github') {
           setSelectedRepoId(repoId);
-          // READ TOKEN DIRECTLY FROM STORAGE TO AVOID STALE STATE
           const storedToken = localStorage.getItem('ada_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN;
-          
           if (!storedToken || storedToken.length < 5) {
-              setShowTokenInput(true); // Only show if genuinely missing
+              setShowTokenInput(true);
               return;
           }
-          // Proceed to file select
           if (fileInputRef.current) fileInputRef.current.click();
           return;
       }
 
-      // DRIVE FLOW
       if (activeTab === 'drive') {
            openUploadBrowser(repo);
       }
@@ -414,18 +399,15 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
       }
   };
 
-  // --- GITHUB UPLOAD (FIXED & ROBUST) ---
+  // --- GITHUB UPLOAD ---
   const uploadToGitHubReal = async (file: File, repo: Repository) => {
       try {
-          // 1. Get Token Forcefully
           const effectiveToken = localStorage.getItem('ada_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN;
           if (!effectiveToken) throw new Error("Token de GitHub no encontrado en configuración.");
 
           setUploadStatusMsg('Verificando repositorio...');
           setProgress(10);
           
-          // 2. Parse URL carefully
-          // Example: https://github.com/owner/repo
           const cleanUrl = repo.url.replace(/\/$/, "").replace(/\.git$/, "");
           const match = cleanUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
           
@@ -439,7 +421,6 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
               reader.readAsDataURL(file);
               reader.onload = () => {
                   const result = reader.result as string;
-                  // Remove "data:application/pdf;base64," prefix
                   const base64 = result.split(',')[1];
                   resolve(base64);
               };
@@ -449,10 +430,8 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
           setProgress(30);
           setUploadStatusMsg(`Subiendo a ${owner}/${repoName}...`);
           
-          // 3. GitHub API Endpoint
           const apiUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/${file.name}`; 
           
-          // 4. PUT Request
           const response = await fetch(apiUrl, {
               method: 'PUT',
               headers: {
@@ -470,31 +449,16 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
           
           if (!response.ok) {
               const errorData = await response.json();
-              
-              // Handle 401: Invalid Token
-              if (response.status === 401) {
-                  // DO NOT DELETE TOKEN. Just warn.
-                  throw new Error("Token rechazado por GitHub. Verifica tus permisos en el Engranaje.");
-              }
-              // Handle 422: File exists or validation error
-              if (response.status === 422) {
-                  throw new Error("El archivo ya existe o hay conflicto de SHA. Intenta renombrarlo.");
-              }
-              if (response.status === 404) {
-                   throw new Error("Repositorio no encontrado. Verifica que el Token tenga permisos de 'Repo' y la URL sea correcta.");
-              }
-
+              if (response.status === 401) throw new Error("Token rechazado por GitHub.");
+              if (response.status === 422) throw new Error("El archivo ya existe o hay conflicto.");
+              if (response.status === 404) throw new Error("Repositorio no encontrado.");
               throw new Error(errorData.message || `Error ${response.status} de GitHub.`);
           }
           
           const data = await response.json();
           setProgress(100);
-          
-          // Use html_url for the link, or fallback to repo url
           completeUpload(file, repo, data.content?.html_url || repo.url);
-
       } catch (error: any) {
-          console.error("GitHub Upload Error:", error);
           setUploadState('error');
           setUploadStatusMsg(error.message);
       }
@@ -525,7 +489,8 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
 
   return (
     <div className="fixed inset-0 z-[80] bg-black/80 flex items-center justify-center backdrop-blur-sm p-4 animate-fade-in">
-        <div className="bg-white rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col h-[90vh] md:h-auto md:max-h-[85vh]">
+        {/* CHANGED: max-w-2xl -> max-w-5xl, h-auto -> h-[90vh] to force a larger fixed window */}
+        <div className="bg-white rounded-xl w-full max-w-5xl shadow-2xl overflow-hidden flex flex-col h-[90vh]">
             <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileSelect} />
 
             {/* Header */}
@@ -536,11 +501,10 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                     </div>
                     <div>
                         <h2 className="text-xl font-bold">Gestor de Repositorios</h2>
-                        <p className="text-white/60 text-sm truncate max-w-[200px]">{project.name}</p>
+                        <p className="text-white/60 text-sm truncate max-w-[300px]">{project.name}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {/* Direct Config Button */}
                     <button 
                         onClick={() => { alert("Por favor, ve al Dashboard > Engranaje para configurar el Client ID y el Origen Autorizado."); }} 
                         className="bg-white/10 hover:bg-white/20 text-xs px-3 py-1.5 rounded flex items-center gap-2"
@@ -569,11 +533,12 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 relative">
+            {/* CHANGED: Removed h-auto, rely on parent flex. Added relative for absolute overlays. */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 relative flex flex-col">
                 
                 {/* --- CONFIG HINT FOR DRIVE ERROR --- */}
                 {showConfigHint && (
-                     <div className="bg-red-50 p-4 rounded-xl border border-red-200 mb-4 animate-slide-up relative">
+                     <div className="bg-red-50 p-4 rounded-xl border border-red-200 mb-4 animate-slide-up relative shrink-0">
                          <button onClick={()=>setShowConfigHint(false)} className="absolute top-2 right-2 text-red-400 hover:text-red-600"><Icon name="fa-times"/></button>
                          <h4 className="font-bold text-red-700 text-sm mb-1"><Icon name="fa-exclamation-circle"/> Problemas de Conexión</h4>
                          <p className="text-xs text-red-600 leading-relaxed mb-2">
@@ -590,71 +555,113 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
 
                 {/* --- STRUCTURE PICKER OVERLAY --- */}
                 {isPickerOpen && (
-                    <div className="absolute inset-0 bg-white z-50 flex flex-col p-4 animate-fade-in">
-                        <div className="flex justify-between items-center mb-4 border-b pb-2 shrink-0">
+                    <div className="absolute inset-0 bg-white z-50 flex flex-col animate-fade-in">
+                        <div className="p-4 border-b bg-slate-50 flex justify-between items-center shrink-0">
                              <div>
-                                 <h3 className="font-bold text-slate-800">Ubicación del Proyecto</h3>
-                                 <p className="text-xs text-slate-500">¿Dónde crear la carpeta raíz?</p>
+                                 <h3 className="font-bold text-slate-800 text-lg">Seleccionar Carpeta Raíz</h3>
+                                 <p className="text-xs text-slate-500">Navega y selecciona dónde crear el proyecto.</p>
                              </div>
-                             <button onClick={() => setIsPickerOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="fa-times" /></button>
+                             <button onClick={() => setIsPickerOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="fa-times" className="text-xl" /></button>
                         </div>
-                        <div className="flex-1 overflow-y-auto bg-slate-50 rounded-lg border border-slate-200 p-2 space-y-1">
+                        
+                        <div className="flex-1 overflow-y-auto p-2">
                              {pickerLoading ? (
-                                 <div className="flex items-center justify-center h-full text-slate-400 gap-2"><Icon name="fa-circle-notch" className="animate-spin" /> Cargando...</div>
+                                 <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+                                     <Icon name="fa-circle-notch" className="animate-spin text-3xl" /> 
+                                     <span>Cargando carpetas de Drive...</span>
+                                 </div>
                              ) : (
-                                 pickerItems.map(item => (
-                                     <div key={item.id} className="flex items-center justify-between p-3 hover:bg-white cursor-pointer border-b hover:border-slate-100" onClick={() => handlePickerEnter(item)}>
-                                          <div className="flex items-center gap-3">
-                                              <Icon name="fa-folder" className="text-yellow-400 text-lg" />
-                                              <span className="text-sm text-slate-700 font-medium truncate max-w-[180px]">{item.name}</span>
-                                          </div>
-                                          <Icon name="fa-chevron-right" className="text-slate-300 text-xs" />
-                                     </div>
-                                 ))
+                                 <div className="space-y-1">
+                                     {pickerCurrentFolder.id !== 'root' && pickerBreadcrumb.length > 1 && (
+                                         <button 
+                                            onClick={() => handlePickerUp(pickerBreadcrumb.length - 2)}
+                                            className="w-full text-left p-3 hover:bg-slate-100 rounded-lg flex items-center gap-3 text-slate-600 font-bold border border-transparent hover:border-slate-200"
+                                         >
+                                             <Icon name="fa-level-up-alt" /> ... Subir un nivel
+                                         </button>
+                                     )}
+                                     
+                                     {pickerItems.map(item => (
+                                         <div key={item.id} className="flex items-center justify-between p-4 hover:bg-blue-50 cursor-pointer border rounded-lg border-slate-100 hover:border-blue-200 transition-colors" onClick={() => handlePickerEnter(item)}>
+                                              <div className="flex items-center gap-4 overflow-hidden">
+                                                  <div className="w-10 h-10 bg-yellow-100 text-yellow-600 rounded flex items-center justify-center shrink-0">
+                                                      <Icon name="fa-folder" className="text-xl" />
+                                                  </div>
+                                                  <span className="text-sm text-slate-700 font-bold truncate">{item.name}</span>
+                                              </div>
+                                              <Icon name="fa-chevron-right" className="text-slate-300 text-xs" />
+                                         </div>
+                                     ))}
+                                     {pickerItems.length === 0 && (
+                                         <div className="text-center py-10 text-slate-400">Carpeta vacía</div>
+                                     )}
+                                 </div>
                              )}
                         </div>
-                        <div className="mt-4 shrink-0 flex justify-between items-center bg-blue-50 p-3 rounded-lg border border-blue-100">
-                            <div className="text-xs text-blue-800 truncate mr-2">Selección: <strong>{pickerCurrentFolder.name}</strong></div>
-                            <button onClick={confirmSelection} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-xs font-bold">Seleccionar</button>
+                        <div className="p-4 border-t bg-slate-50 flex justify-between items-center shrink-0">
+                            <div className="text-sm text-slate-600 truncate mr-4 max-w-[50%]">Selección: <strong>{pickerCurrentFolder.name}</strong></div>
+                            <button onClick={confirmSelection} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg text-sm font-bold shadow-lg">Confirmar Aquí</button>
                         </div>
                     </div>
                 )}
 
                 {/* --- UPLOAD BROWSER OVERLAY --- */}
                 {isUploadBrowserOpen && (
-                    <div className="absolute inset-0 bg-white z-50 flex flex-col p-4 animate-fade-in">
-                        <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-4 shrink-0">
+                    <div className="absolute inset-0 bg-white z-50 flex flex-col animate-fade-in">
+                        <div className="p-4 border-b bg-green-50 flex justify-between items-center shrink-0">
                              <div className="flex items-center gap-3">
-                                 <div className="w-10 h-10 bg-green-100 text-green-600 rounded-lg flex items-center justify-center text-xl"><Icon name="fab fa-google-drive" /></div>
+                                 <div className="w-10 h-10 bg-green-200 text-green-700 rounded-lg flex items-center justify-center text-xl"><Icon name="fab fa-google-drive" /></div>
                                  <div>
-                                    <h3 className="font-bold text-slate-800 text-lg leading-tight">Explorador Drive</h3>
-                                    <p className="text-xs text-slate-500">Navega y sube tu archivo.</p>
+                                    <h3 className="font-bold text-green-900 text-lg">Explorador Drive</h3>
+                                    <p className="text-xs text-green-700">Navega hasta la carpeta de destino.</p>
                                  </div>
                              </div>
-                             <button onClick={() => setIsUploadBrowserOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="fa-times" /></button>
+                             <button onClick={() => setIsUploadBrowserOpen(false)} className="text-slate-400 hover:text-slate-600"><Icon name="fa-times" className="text-xl" /></button>
                         </div>
-                        <div className="flex-1 overflow-y-auto bg-slate-50 rounded-xl border border-slate-200 p-3 space-y-2">
+                        
+                        <div className="flex-1 overflow-y-auto p-2 bg-slate-50">
                              {uploadBrowserLoading ? (
-                                 <div className="flex items-center justify-center h-full text-slate-400 gap-2"><Icon name="fa-circle-notch" className="animate-spin" /> Cargando...</div>
-                             ) : uploadBrowserItems.map(item => (
-                                 <div key={item.id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl cursor-pointer hover:shadow-sm" onClick={() => handleUploadNavigate(item)}>
-                                      <div className="flex items-center gap-4">
-                                          <Icon name="fa-folder" className="text-yellow-500 text-xl" />
-                                          <span className="text-sm font-bold text-slate-700 truncate">{item.name}</span>
-                                      </div>
-                                      <Icon name="fa-chevron-right" className="text-slate-300 text-xs" />
+                                 <div className="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+                                     <Icon name="fa-circle-notch" className="animate-spin text-3xl" /> 
+                                     <span>Cargando...</span>
                                  </div>
-                             ))}
+                             ) : (
+                                <div className="space-y-1">
+                                    {uploadBreadcrumb.length > 1 && (
+                                         <button 
+                                            onClick={() => handleUploadNavigateUp(uploadBreadcrumb.length - 2)}
+                                            className="w-full text-left p-3 bg-white hover:bg-slate-100 rounded-lg flex items-center gap-3 text-slate-600 font-bold border border-slate-200 mb-2"
+                                         >
+                                             <Icon name="fa-level-up-alt" /> ... Subir un nivel
+                                         </button>
+                                     )}
+
+                                     {uploadBrowserItems.map(item => (
+                                         <div key={item.id} className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl cursor-pointer hover:shadow-md transition-all" onClick={() => handleUploadNavigate(item)}>
+                                              <div className="flex items-center gap-4 overflow-hidden">
+                                                  <div className="w-10 h-10 bg-yellow-100 text-yellow-600 rounded flex items-center justify-center shrink-0">
+                                                      <Icon name="fa-folder" className="text-xl" />
+                                                  </div>
+                                                  <span className="text-sm font-bold text-slate-700 truncate">{item.name}</span>
+                                              </div>
+                                              <Icon name="fa-chevron-right" className="text-slate-300 text-xs" />
+                                         </div>
+                                     ))}
+                                      {uploadBrowserItems.length === 0 && (
+                                         <div className="text-center py-10 text-slate-400">Carpeta vacía</div>
+                                     )}
+                                </div>
+                             )}
                         </div>
-                        <div className="mt-4">
-                             <button onClick={triggerFileUploadHere} className="w-full bg-green-600 text-white py-3.5 rounded-xl font-bold text-sm shadow-md hover:bg-green-700 flex items-center justify-center gap-2">
-                                <Icon name="fa-cloud-upload-alt" /> SUBIR ARCHIVO AQUÍ
+                        <div className="p-4 bg-white border-t flex justify-center shrink-0">
+                             <button onClick={triggerFileUploadHere} className="w-full max-w-md bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-xl hover:bg-green-700 flex items-center justify-center gap-3 transform hover:scale-105 transition-all">
+                                <Icon name="fa-cloud-upload-alt" /> SUBIR ARCHIVO A ESTA CARPETA
                              </button>
                         </div>
                     </div>
                 )}
 
-                {/* TOKEN INPUT MODAL (Only shows if localStorage is empty) */}
+                {/* TOKEN INPUT MODAL */}
                 {showTokenInput && (
                     <div className="absolute inset-0 z-[100] bg-slate-900/90 flex items-center justify-center p-6 animate-fade-in">
                         <div className="bg-white rounded-xl w-full max-w-sm p-6 shadow-2xl">
@@ -670,7 +677,6 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                                 value={githubToken}
                                 onChange={e => {
                                     setGithubToken(e.target.value);
-                                    // Save to Dashboard key to fix sync permanently
                                     localStorage.setItem('ada_env_GITHUB_TOKEN', e.target.value);
                                 }}
                             />
@@ -697,7 +703,7 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                     </div>
                 )}
 
-                {/* ERROR OVERLAY */}
+                {/* ERROR/SUCCESS OVERLAYS */}
                 {(uploadState === 'error' || creationStatus === 'error') && (
                     <div className="absolute inset-0 bg-white z-[60] flex flex-col items-center justify-center p-8 animate-fade-in text-center">
                         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-600 text-3xl mx-auto">
@@ -709,7 +715,6 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                     </div>
                 )}
 
-                {/* SUCCESS OVERLAY */}
                 {uploadState === 'success' && (
                     <div className="absolute inset-0 bg-white z-[60] flex flex-col items-center justify-center p-8 animate-scale-up">
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4 text-green-600 text-4xl">
@@ -725,7 +730,7 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                     <div className="space-y-4">
                         <div className="flex justify-between items-center mb-2">
                             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
-                                {activeTab === 'drive' ? 'Carpetas' : 'Repositorios'} ({repositories.length})
+                                {activeTab === 'drive' ? 'Carpetas Vinculadas' : 'Repositorios Vinculados'} ({repositories.length})
                             </h3>
                             <button onClick={() => setViewMode('add')} className={`text-xs font-bold text-${themeColor}-600 hover:underline flex items-center gap-1`}>
                                 <Icon name="fa-plus" /> Agregar Nuevo
@@ -744,27 +749,27 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                                 <div key={repo.id} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
                                     <div className="flex justify-between items-start mb-3">
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-lg bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 text-xl`}>
+                                            <div className={`w-12 h-12 rounded-lg bg-${themeColor}-50 flex items-center justify-center text-${themeColor}-600 text-2xl`}>
                                                 <Icon name={activeTab === 'drive' ? 'fa-folder' : 'fa-code-branch'} />
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-slate-800 text-sm">{repo.alias}</h4>
-                                                <a href={repo.url} target="_blank" className="text-xs text-slate-400 hover:text-blue-500 truncate max-w-[150px] block underline">
+                                                <h4 className="font-bold text-slate-800 text-base">{repo.alias}</h4>
+                                                <a href={repo.url} target="_blank" className="text-xs text-slate-400 hover:text-blue-500 truncate max-w-[250px] block underline">
                                                     {repo.url}
                                                 </a>
                                             </div>
                                         </div>
-                                        <button onClick={() => handleDeleteRepo(repo.id)} className="text-slate-300 hover:text-red-500 px-2"><Icon name="fa-trash" /></button>
+                                        <button onClick={() => handleDeleteRepo(repo.id)} className="text-slate-300 hover:text-red-500 px-3 py-2"><Icon name="fa-trash" /></button>
                                     </div>
                                     <div className="flex gap-2 mt-2">
-                                        <button onClick={() => window.open(repo.url, '_blank')} className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200 flex items-center justify-center gap-2">
+                                        <button onClick={() => window.open(repo.url, '_blank')} className="flex-1 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-slate-200 flex items-center justify-center gap-2 transition-colors">
                                             <Icon name="fa-external-link-alt" /> Abrir
                                         </button>
                                         <button 
                                             onClick={() => handleTriggerUpload(repo.id)}
-                                            className={`flex-1 py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all ${activeTab === 'drive' && !driveToken ? 'bg-white text-slate-700 border border-slate-300' : `bg-${themeColor}-600 text-white hover:bg-${themeColor}-700`}`}
+                                            className={`flex-1 py-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 shadow-sm transition-all ${activeTab === 'drive' && !driveToken ? 'bg-white text-slate-700 border border-slate-300' : `bg-${themeColor}-600 text-white hover:bg-${themeColor}-700`}`}
                                         >
-                                            {activeTab === 'drive' && !driveToken ? <><Icon name="fab fa-google" /> Conectar</> : <><Icon name="fa-cloud-upload-alt" /> Subir</>}
+                                            {activeTab === 'drive' && !driveToken ? <><Icon name="fab fa-google" /> Conectar</> : <><Icon name="fa-cloud-upload-alt" /> Subir Archivo</>}
                                         </button>
                                     </div>
                                 </div>
@@ -783,25 +788,47 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                         {activeTab === 'drive' && (
                             <div className="bg-gradient-to-br from-green-50 to-white p-6 rounded-xl border border-green-200 shadow-sm relative overflow-hidden">
                                 <div className="relative z-10">
-                                    <div className="flex items-start gap-3 mb-4">
-                                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-xl shrink-0"><Icon name="fa-magic" /></div>
+                                    <div className="flex items-start gap-4 mb-6">
+                                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-2xl shrink-0"><Icon name="fa-magic" /></div>
                                         <div>
-                                            <h4 className="font-bold text-green-900">Generador de Estructura</h4>
-                                            <p className="text-sm text-green-700/80 mt-1">Crea la estructura estándar de 8 carpetas.</p>
+                                            <h4 className="font-bold text-green-900 text-lg">Generador de Estructura Automática</h4>
+                                            <p className="text-sm text-green-700/80 mt-1">Crea automáticamente las 8 carpetas estándar del proyecto ADA.</p>
                                         </div>
                                     </div>
-                                    <div className="mb-4 bg-white/60 p-2 rounded border border-green-100 flex items-center justify-between">
-                                        <div className="text-xs text-green-800 truncate mr-2"><span className="font-bold uppercase opacity-60">En:</span> <span className="font-bold">{targetParent.name}</span></div>
-                                        <button onClick={openPicker} className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded font-bold">Cambiar</button>
+                                    
+                                    <div className="mb-6 bg-white/80 p-4 rounded-xl border border-green-100 flex items-center justify-between shadow-sm">
+                                        <div>
+                                            <span className="text-xs font-bold text-green-800 uppercase block mb-1">Carpeta Padre (Ubicación)</span>
+                                            <div className="font-bold text-slate-700 flex items-center gap-2">
+                                                <Icon name="fab fa-google-drive" /> {targetParent.name}
+                                            </div>
+                                        </div>
+                                        <button onClick={openPicker} className="bg-green-100 text-green-700 hover:bg-green-200 px-4 py-2 rounded-lg text-xs font-bold transition-colors">
+                                            Cambiar Ubicación
+                                        </button>
                                     </div>
+
                                     {creationStatus === 'idle' ? (
                                         <div className="flex items-end gap-3">
-                                             <div className="flex-1 min-w-[50px]"><label className="block text-[10px] font-bold text-green-800 uppercase mb-1">ID</label><input value={correlative} onChange={e => setCorrelative(e.target.value)} className="w-full border border-green-300 rounded p-2 text-sm text-center font-mono font-bold" /></div>
-                                             <div className="flex-[3]"><label className="block text-[10px] font-bold text-green-800 uppercase mb-1">Nombre Previsto</label><div className="w-full bg-white/50 border border-green-200 rounded p-2 text-sm text-green-900 font-mono truncate">{correlative}_{project.name.replace(/\s+/g, "")}</div></div>
-                                             <button onClick={handleCreateStructure} className="bg-green-600 text-white font-bold py-2 px-4 rounded shadow-lg">Generar</button>
+                                             <div className="flex-1 min-w-[80px] max-w-[120px]">
+                                                 <label className="block text-xs font-bold text-green-800 uppercase mb-1">Correlativo</label>
+                                                 <input value={correlative} onChange={e => setCorrelative(e.target.value)} className="w-full border border-green-300 rounded-lg p-3 text-center font-mono font-bold text-lg" />
+                                             </div>
+                                             <div className="flex-[3]">
+                                                 <label className="block text-xs font-bold text-green-800 uppercase mb-1">Nombre Carpeta Final</label>
+                                                 <div className="w-full bg-white border border-green-200 rounded-lg p-3 text-green-900 font-mono text-sm truncate">
+                                                     {correlative}_{project.name.replace(/\s+/g, "")}
+                                                 </div>
+                                             </div>
+                                             <button onClick={handleCreateStructure} className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform hover:scale-105">
+                                                 Generar Estructura
+                                             </button>
                                         </div>
                                     ) : (
-                                        <div className="bg-white/80 p-4 rounded border border-green-200 text-center text-sm font-bold text-green-800">{creationLog}</div>
+                                        <div className="bg-white/90 p-6 rounded-xl border border-green-200 text-center">
+                                            <div className="text-green-600 text-3xl mb-2"><Icon name="fa-sync" className="animate-spin" /></div>
+                                            <div className="text-sm font-bold text-green-800">{creationLog}</div>
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -809,9 +836,9 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                             <h4 className="font-bold text-slate-800 mb-4 border-b pb-2">O vincular manualmente</h4>
                             <div className="space-y-4">
-                                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Alias</label><input className="w-full border border-slate-300 p-3 rounded-lg" value={newRepo.alias} onChange={e => setNewRepo({...newRepo, alias: e.target.value})} /></div>
-                                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">URL</label><input className="w-full border border-slate-300 p-3 rounded-lg font-mono text-sm" value={newRepo.url} onChange={e => setNewRepo({...newRepo, url: e.target.value})} /></div>
-                                <div className="pt-4"><button onClick={handleAddRepo} disabled={!newRepo.alias || !newRepo.url} className={`w-full py-3 bg-slate-700 text-white font-bold rounded-lg shadow-lg`}>Guardar Enlace Manual</button></div>
+                                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Alias (Nombre Visible)</label><input className="w-full border border-slate-300 p-3 rounded-lg" value={newRepo.alias} onChange={e => setNewRepo({...newRepo, alias: e.target.value})} placeholder="Ej. Documentación Final" /></div>
+                                <div><label className="block text-xs font-bold text-slate-500 uppercase mb-1">URL Directa</label><input className="w-full border border-slate-300 p-3 rounded-lg font-mono text-sm" value={newRepo.url} onChange={e => setNewRepo({...newRepo, url: e.target.value})} placeholder="https://..." /></div>
+                                <div className="pt-4"><button onClick={handleAddRepo} disabled={!newRepo.alias || !newRepo.url} className={`w-full py-3 bg-slate-700 text-white font-bold rounded-lg shadow-lg hover:bg-slate-600 transition-colors`}>Guardar Enlace Manual</button></div>
                             </div>
                         </div>
                     </div>
