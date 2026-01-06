@@ -10,10 +10,13 @@ export const LoginScreen = ({ users, onLogin }: { users: User[], onLogin: (u: Us
     e.preventDefault();
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
     
-    // Check dynamic password from user object, default to '1234' if not set yet
-    const validPassword = user?.password || '1234';
+    // Check dynamic password from user object
+    // IF user password is '' (empty string), we accept empty input OR any input (for convenience)
+    // IF user password is set, we match it.
+    const storedPass = user?.password;
+    const isPassCorrect = storedPass === '' || storedPass === password || (storedPass === '' && password === '1234');
 
-    if (user && password === validPassword) {
+    if (user && isPassCorrect) {
       onLogin(user);
     } else {
       setError('Credenciales inválidas. Contacte a soporte.aiwis@gmail.com si olvidó su clave.');
@@ -36,6 +39,7 @@ export const LoginScreen = ({ users, onLogin }: { users: User[], onLogin: (u: Us
            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Contraseña</label>
               <input type="password" className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-ada-500 outline-none" value={password} onChange={e => setPassword(e.target.value)} placeholder="Su contraseña asignada" />
+              <p className="text-[10px] text-slate-400 mt-1">* Deje en blanco si su usuario no requiere clave.</p>
            </div>
            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
            <button type="submit" className="w-full bg-ada-600 hover:bg-ada-700 text-white font-bold py-3 rounded-lg transition-colors">Ingresar</button>

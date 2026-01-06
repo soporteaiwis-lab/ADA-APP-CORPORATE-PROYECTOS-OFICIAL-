@@ -53,16 +53,16 @@ export const INITIAL_USERS: User[] = [
     projects: ['PROYECTO_001', 'PROYECTO_002', 'PROYECTO_003', 'PROYECTO_004']
   },
   {
-    id: 'u_armin',
-    name: 'Armin Salazar',
-    role: UserRole.ADMIN, // Mentor AIWIS (Super Admin permissions)
-    email: 'armin.salazar@aiwis.cl',
-    password: '1234',
-    avatar: 'https://ui-avatars.com/api/?name=Armin+Salazar&background=ff0000&color=fff',
+    id: 'u_aiwis',
+    name: 'Soporte AIWIS', 
+    role: UserRole.ADMIN, 
+    email: 'soporte.aiwis@gmail.com',
+    password: '', // Password vacía permitida
+    avatar: 'https://ui-avatars.com/api/?name=AIWIS+Root&background=000000&color=fff',
     skills: [
-      { name: 'Mentoria Tecnológica', level: 100 },
-      { name: 'Arquitectura AI', level: 100 },
-      { name: 'Integración de Sistemas', level: 98 }
+      { name: 'System Architecture', level: 100 },
+      { name: 'Database Management', level: 100 },
+      { name: 'Security', level: 100 }
     ],
     projects: ['PROYECTO_001', 'PROYECTO_004']
   },
@@ -192,7 +192,7 @@ export const INITIAL_PROJECTS: Project[] = [
     client: 'Interno ADA',
     encargadoCliente: 'Gerencia Admin',
     leadId: 'u_pedro', // Pedro Concha (PM)
-    teamIds: ['u_andrea', 'u_doris', 'u_armin', 'u_julio'],
+    teamIds: ['u_andrea', 'u_doris', 'u_aiwis', 'u_julio'],
     status: 'En Curso',
     isOngoing: true,
     report: true,
@@ -203,7 +203,7 @@ export const INITIAL_PROJECTS: Project[] = [
     description: 'Desarrollar un sistema interno para la facturación y cobranza de servicios. Debe integrarse con el sistema de contabilidad.',
     technologies: ['AWS', 'Python', 'Spark', 'Terraform'],
     logs: [
-      { id: 'l1', date: '2025-02-10T10:00:00', text: 'Inicio de la fase de diseño de arquitectura.', author: 'Armin Salazar' },
+      { id: 'l1', date: '2025-02-10T10:00:00', text: 'Inicio de la fase de diseño de arquitectura.', author: 'Soporte AIWIS' },
       { id: 'l2', date: '2025-02-12T14:30:00', text: 'Reunión con contabilidad para definir esquema de base de datos.', author: 'Andrea Martínez' }
     ],
     repositories: [
@@ -259,7 +259,7 @@ export const INITIAL_PROJECTS: Project[] = [
     client: 'Banco Financiero',
     encargadoCliente: 'CISO',
     leadId: 'u_rafael', // Rafael (DevOps)
-    teamIds: ['u_raul', 'u_armin', 'u_julio'],
+    teamIds: ['u_raul', 'u_aiwis', 'u_julio'],
     status: 'En Curso',
     isOngoing: true,
     report: true,

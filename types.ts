@@ -85,5 +85,6 @@ export enum AppRoute {
   TEAM = 'team',
   REPORTS = 'reports',
   TOOLS = 'tools',
-  ADMIN = 'admin_panel'
+  ADMIN = 'admin_panel',
+  DATABASE = 'database_manager' // NEW ROUTE
 }

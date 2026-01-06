@@ -59,6 +59,7 @@ export const Sidebar = ({
         
         {/* Admin Link - Only for Admins */}
         {isAdmin && (
+             <>
              <button
                 onClick={() => onNavigate(AppRoute.ADMIN)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group mt-2 ${
@@ -70,6 +71,19 @@ export const Sidebar = ({
                 <Icon name="fa-user-shield" className="text-lg text-red-400" />
                 <span className="font-medium">Admin Usuarios</span>
               </button>
+
+              <button
+                onClick={() => onNavigate(AppRoute.DATABASE)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group mt-1 ${
+                  currentRoute === AppRoute.DATABASE
+                    ? 'bg-orange-900/50 text-orange-200 border border-orange-800' 
+                    : 'hover:bg-orange-900/30 hover:text-orange-200'
+                }`}
+              >
+                <Icon name="fa-database" className="text-lg text-orange-400" />
+                <span className="font-medium">Base de Datos</span>
+              </button>
+             </>
         )}
 
         {/* Tools Button separate in Desktop */}

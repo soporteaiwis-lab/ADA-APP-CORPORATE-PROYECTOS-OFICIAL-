@@ -12,6 +12,7 @@ import { GemsView } from './components/GemsView';
 import { TeamView } from './components/TeamView';
 import { ReportsView } from './components/ReportsView';
 import { AdminUsersView } from './components/AdminUsersView';
+import { DatabaseView } from './components/DatabaseView'; // NEW IMPORT
 import { ToolsModal } from './components/ToolsModal';
 import { LoginScreen } from './components/LoginScreen';
 
@@ -97,8 +98,6 @@ const App = () => {
       setDbProjects(p);
       setDbGems(g);
       setDbTools(t);
-    } catch (e) {
-      console.error("Failed to load DB", e);
     } finally {
       setLoading(false);
     }
@@ -106,97 +105,67 @@ const App = () => {
 
   useEffect(() => { loadData(); }, []);
 
+  // Handlers
+  const handleLogin = (u: User) => setUser(u);
+  const handleLogout = () => setUser(null);
+  
   const handleAddProject = async (p: Project) => { await db.addProject(p); loadData(); };
-  const handleUpdateProject = async (p: Project) => { await db.updateProject(p); setDbProjects(prev => prev.map(proj => proj.id === p.id ? p : proj)); };
-  const handleDeleteProject = async (id: string) => { if(confirm('¿Seguro que deseas eliminar este proyecto?')) { await db.deleteProject(id); loadData(); }};
+  const handleUpdateProject = async (p: Project) => { await db.updateProject(p); loadData(); };
+  const handleDeleteProject = async (id: string) => { await db.deleteProject(id); loadData(); };
+  
+  const handleAddGem = async (g: Gem) => { await db.addGem(g); loadData(); };
   
   const handleAddUser = async (u: User) => { await db.addUser(u); loadData(); };
   const handleUpdateUser = async (u: User) => { await db.updateUser(u); loadData(); };
-  const handleDeleteUser = async (id: string) => { if(confirm('¿Eliminar colaborador? Esta acción no se puede deshacer.')) { await db.deleteUser(id); loadData(); }};
+  const handleDeleteUser = async (id: string) => { await db.deleteUser(id); loadData(); };
   
-  const handleAddGem = async (g: Gem) => { await db.addGem(g); loadData(); };
   const handleAddTool = async (t: Tool) => { await db.addTool(t); loadData(); };
 
   const handleResetDB = async () => {
-      setLoading(true);
       await db.resetToDefaults();
-      await loadData();
-      alert("Base de datos restaurada correctamente. Los datos de código (constants) ahora son los vigentes.");
-  };
-  
-  // Mobile Nav Logic for Tools
-  const handleNavigate = (r: AppRoute) => {
-      if (r === AppRoute.TOOLS) {
-          setIsToolsOpen(true);
-      } else {
-          setRoute(r);
-          setIsToolsOpen(false); // Close tools if navigating away
-      }
+      window.location.reload();
   };
 
-  // Login Screen
-  if (!user) {
-    if (loading) return <div className="min-h-screen flex items-center justify-center text-slate-400">Cargando Ecosistema...</div>;
-    return <LoginScreen users={dbUsers} onLogin={setUser} />;
-  }
+  if (loading) return <div className="h-screen flex items-center justify-center bg-slate-100 text-ada-600"><Icon name="fa-circle-notch" className="text-3xl animate-spin" /></div>;
 
-  // Security check for Admin Route
-  const safeRoute = (route === AppRoute.ADMIN && user.role !== UserRole.ADMIN && user.role !== UserRole.CEO) ? AppRoute.DASHBOARD : route;
+  if (!user) return <LoginScreen users={dbUsers} onLogin={handleLogin} />;
 
-  // Main App Layout
   return (
-    <div className="min-h-screen bg-slate-100 font-sans text-slate-800">
-      
-      {/* Desktop Sidebar (HIDDEN ON MOBILE via lg:flex) */}
+    <div className="flex bg-slate-50 min-h-screen font-sans">
       <Sidebar 
           currentUser={user} 
-          currentRoute={safeRoute} 
-          onNavigate={handleNavigate} 
-          onLogout={() => setUser(null)} 
+          currentRoute={route} 
+          onNavigate={setRoute} 
+          onLogout={handleLogout}
           onOpenTools={() => setIsToolsOpen(true)}
       />
+      
+      <main className="flex-1 lg:ml-64 p-4 lg:p-8 relative">
+        {route === AppRoute.DASHBOARD && <Dashboard currentUser={user} projects={dbProjects} />}
+        {route === AppRoute.PROJECTS && <ProjectsView projects={dbProjects} users={dbUsers} currentUser={user} onAddProject={handleAddProject} onDeleteProject={handleDeleteProject} onUpdateProject={handleUpdateProject} />}
+        {route === AppRoute.GEMS && <GemsView gems={dbGems} onAddGem={handleAddGem} />}
+        {route === AppRoute.TEAM && <TeamView users={dbUsers} currentUser={user} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} />}
+        {route === AppRoute.REPORTS && <ReportsView currentUser={user} projects={dbProjects} onUpdateProject={handleUpdateProject} />}
+        {route === AppRoute.ADMIN && <AdminUsersView users={dbUsers} projects={dbProjects} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onUpdateProject={handleUpdateProject} onResetDB={handleResetDB} />}
+        
+        {/* DATABASE VIEW ROUTE */}
+        {route === AppRoute.DATABASE && (user.role === UserRole.ADMIN || user.role === UserRole.CEO) && <DatabaseView />}
+        {route === AppRoute.DATABASE && !(user.role === UserRole.ADMIN || user.role === UserRole.CEO) && <div className="p-10 text-center text-red-500 font-bold">Acceso Restringido</div>}
 
-      {/* Main Content Area - Full width on Mobile, Padded on Desktop */}
-      <main className="pl-0 lg:pl-64 min-h-screen transition-all duration-300">
-        <div className="max-w-7xl mx-auto p-4 lg:p-8">
-          {safeRoute === AppRoute.DASHBOARD && <Dashboard currentUser={user} projects={dbProjects} />}
-          {safeRoute === AppRoute.PROJECTS && <ProjectsView projects={dbProjects} users={dbUsers} currentUser={user} onAddProject={handleAddProject} onDeleteProject={handleDeleteProject} onUpdateProject={handleUpdateProject} />}
-          {safeRoute === AppRoute.GEMS && <GemsView gems={dbGems} onAddGem={handleAddGem} />}
-          {safeRoute === AppRoute.TEAM && <TeamView users={dbUsers} currentUser={user} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} />}
-          {safeRoute === AppRoute.REPORTS && <ReportsView currentUser={user} projects={dbProjects} onUpdateProject={handleUpdateProject} />}
-          
-          {/* Admin Panel Route */}
-          {safeRoute === AppRoute.ADMIN && (
-              <AdminUsersView 
-                  users={dbUsers} 
-                  projects={dbProjects}
-                  onAddUser={handleAddUser} 
-                  onUpdateUser={handleUpdateUser} 
-                  onDeleteUser={handleDeleteUser} 
-                  onUpdateProject={handleUpdateProject}
-                  onResetDB={handleResetDB}
-              />
-          )}
-        </div>
+        {/* Floating Chat Button */}
+        <button 
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          className="fixed bottom-24 right-4 lg:bottom-8 lg:right-8 w-14 h-14 bg-ada-600 text-white rounded-full shadow-2xl flex items-center justify-center hover:bg-ada-700 transition-transform active:scale-95 z-50 print:hidden"
+        >
+          <Icon name={isChatOpen ? "fa-times" : "fa-comment-alt"} className="text-xl" />
+        </button>
+
+        <AIChatOverlay isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} currentUser={user} />
       </main>
 
-      {/* Mobile Bottom Nav (VISIBLE ONLY ON MOBILE via lg:hidden) */}
-      <MobileNav currentRoute={safeRoute} onNavigate={handleNavigate} currentUser={user} />
+      <MobileNav currentRoute={route} onNavigate={setRoute} currentUser={user} />
 
-      {/* Tools Modal (Global Overlay) */}
       {isToolsOpen && <ToolsModal onClose={() => setIsToolsOpen(false)} tools={dbTools} onAddTool={handleAddTool} />}
-
-      {/* Chat FAB (Floating Action Button) - Adjusted for mobile safe area */}
-      {!isChatOpen && (
-        <button 
-            onClick={() => setIsChatOpen(true)} 
-            className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 w-12 h-12 lg:w-14 lg:h-14 bg-ada-900 text-white rounded-full shadow-lg hover:bg-ada-800 hover:scale-110 transition-all flex items-center justify-center text-xl lg:text-2xl z-40 print:hidden"
-        >
-            <Icon name="fa-comment-dots" />
-        </button>
-      )}
-      
-      <AIChatOverlay isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} currentUser={user} />
     </div>
   );
 };
