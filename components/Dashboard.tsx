@@ -16,36 +16,35 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
 
   // Settings Modal State
   const [showConfig, setShowConfig] = useState(false);
+  // UPDATED KEYS TO ADA PREFIX
   const [manualKeys, setManualKeys] = useState({
-      apiKey: localStorage.getItem('simpledata_env_API_KEY') || '',
-      githubToken: localStorage.getItem('simpledata_env_GITHUB_TOKEN') || '',
-      googleClientId: localStorage.getItem('simpledata_env_GOOGLE_CLIENT_ID') || ''
+      apiKey: localStorage.getItem('ada_env_API_KEY') || '',
+      githubToken: localStorage.getItem('ada_env_GITHUB_TOKEN') || '',
+      googleClientId: localStorage.getItem('ada_env_GOOGLE_CLIENT_ID') || ''
   });
 
   const handleSaveKeys = () => {
       try {
           // 1. Guardar Gemini API Key
           if (manualKeys.apiKey && manualKeys.apiKey.trim() !== '') {
-              localStorage.setItem('simpledata_env_API_KEY', manualKeys.apiKey.trim());
+              localStorage.setItem('ada_env_API_KEY', manualKeys.apiKey.trim());
           } else {
-              localStorage.removeItem('simpledata_env_API_KEY');
+              localStorage.removeItem('ada_env_API_KEY');
           }
 
           // 2. Guardar GitHub Token (En ambas llaves para asegurar compatibilidad total)
           if (manualKeys.githubToken && manualKeys.githubToken.trim() !== '') {
               const token = manualKeys.githubToken.trim();
-              localStorage.setItem('simpledata_env_GITHUB_TOKEN', token); // Para APP_CONFIG
-              localStorage.setItem('simpledata_github_pat', token);       // Para RepositoryManager (Legacy Fallback)
+              localStorage.setItem('ada_env_GITHUB_TOKEN', token); // Para APP_CONFIG
           } else {
-              localStorage.removeItem('simpledata_env_GITHUB_TOKEN');
-              localStorage.removeItem('simpledata_github_pat');
+              localStorage.removeItem('ada_env_GITHUB_TOKEN');
           }
 
           // 3. Guardar Google Client ID (Para Drive OAuth)
           if (manualKeys.googleClientId && manualKeys.googleClientId.trim() !== '') {
-            localStorage.setItem('simpledata_env_GOOGLE_CLIENT_ID', manualKeys.googleClientId.trim());
+            localStorage.setItem('ada_env_GOOGLE_CLIENT_ID', manualKeys.googleClientId.trim());
           } else {
-            localStorage.removeItem('simpledata_env_GOOGLE_CLIENT_ID');
+            localStorage.removeItem('ada_env_GOOGLE_CLIENT_ID');
           }
           
           // 4. Feedback y Recarga
@@ -64,8 +63,8 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
     <div className="space-y-6 animate-fade-in print:hidden pb-20 lg:pb-0">
       <header className="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-8 gap-4">
         <div>
-          <h2 className="text-2xl lg:text-3xl font-bold text-simple-900">Hola, {currentUser.name.split(' ')[0]}</h2>
-          <p className="text-slate-500 mt-1 text-sm lg:text-base">Bienvenido al ecosistema corporativo SimpleData.</p>
+          <h2 className="text-2xl lg:text-3xl font-bold text-ada-900">Hola, {currentUser.name.split(' ')[0]}</h2>
+          <p className="text-slate-500 mt-1 text-sm lg:text-base">Bienvenido al ecosistema corporativo ADA.</p>
         </div>
         
         {/* Header Actions - Responsive Fix */}
@@ -96,7 +95,7 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
                  {/* Config Button - ALWAYS VISIBLE */}
                  <button 
                     onClick={() => setShowConfig(true)} 
-                    className="w-10 h-10 flex items-center justify-center bg-white text-slate-400 hover:text-simple-600 rounded-xl shadow-sm border border-slate-200 transition-colors" 
+                    className="w-10 h-10 flex items-center justify-center bg-white text-slate-400 hover:text-ada-600 rounded-xl shadow-sm border border-slate-200 transition-colors" 
                     title="Configuración Manual de Llaves"
                  >
                     <Icon name="fa-cog" />
@@ -137,7 +136,7 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
               <Icon name="fa-layer-group" className="text-xl" />
             </div>
           </div>
-          <h3 className="text-3xl font-bold text-simple-900">{activeProjects.length}</h3>
+          <h3 className="text-3xl font-bold text-ada-900">{activeProjects.length}</h3>
           <p className="text-slate-500 text-sm">Proyectos Activos</p>
         </div>
         
@@ -147,11 +146,11 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
               <Icon name="fa-clock" className="text-xl" />
             </div>
           </div>
-          <h3 className="text-3xl font-bold text-simple-900">En Curso</h3>
+          <h3 className="text-3xl font-bold text-ada-900">En Curso</h3>
           <p className="text-slate-500 text-sm">Estado General</p>
         </div>
 
-        <div className="bg-gradient-to-br from-simple-600 to-simple-500 p-6 rounded-2xl shadow-lg text-white">
+        <div className="bg-gradient-to-br from-ada-600 to-ada-500 p-6 rounded-2xl shadow-lg text-white">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-white/20 rounded-xl">
               <Icon name="fa-wand-magic-sparkles" className="text-xl" />
@@ -160,7 +159,7 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
                  {isGeminiReady && <span title="AI Conectada" className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.8)]"></span>}
              </div>
           </div>
-          <h3 className="text-lg font-bold mb-1">SimpleData AI</h3>
+          <h3 className="text-lg font-bold mb-1">ADA AI</h3>
           <p className="text-white/80 text-sm">{isGeminiReady ? 'Conexión segura establecida.' : 'Modo Offline (Sin API Key)'}</p>
         </div>
       </div>
@@ -182,7 +181,7 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
                           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Gemini API Key (Google AI)</label>
                           <input 
                               type="password" 
-                              className="w-full border p-3 rounded-lg font-mono text-sm bg-slate-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-simple-500" 
+                              className="w-full border p-3 rounded-lg font-mono text-sm bg-slate-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-ada-500" 
                               placeholder="AIzb..." 
                               value={manualKeys.apiKey}
                               onChange={e => setManualKeys({...manualKeys, apiKey: e.target.value})}
@@ -193,7 +192,7 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
                           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">GitHub Personal Access Token (PAT)</label>
                           <input 
                               type="password" 
-                              className="w-full border p-3 rounded-lg font-mono text-sm bg-slate-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-simple-500" 
+                              className="w-full border p-3 rounded-lg font-mono text-sm bg-slate-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-ada-500" 
                               placeholder="ghp_..." 
                               value={manualKeys.githubToken}
                               onChange={e => setManualKeys({...manualKeys, githubToken: e.target.value})}
@@ -206,13 +205,13 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
                         </label>
                         <p className="text-[10px] text-slate-400 mb-2">
                            Requerido para subir archivos directo a Drive. 
-                           <a href="https://console.cloud.google.com/apis/credentials" target="_blank" className="text-simple-600 underline ml-1 font-bold">
+                           <a href="https://console.cloud.google.com/apis/credentials" target="_blank" className="text-ada-600 underline ml-1 font-bold">
                                Créalo aquí (Google Cloud Console)
                            </a>.
                         </p>
                         <input 
                               type="text" 
-                              className="w-full border p-3 rounded-lg font-mono text-sm bg-slate-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-simple-500" 
+                              className="w-full border p-3 rounded-lg font-mono text-sm bg-slate-50 focus:bg-white transition-colors outline-none focus:ring-2 focus:ring-ada-500" 
                               placeholder="xxxxxxxx-xxxxxxxx.apps.googleusercontent.com" 
                               value={manualKeys.googleClientId}
                               onChange={e => setManualKeys({...manualKeys, googleClientId: e.target.value})}
@@ -239,7 +238,7 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
                   </div>
                   <div className="p-4 border-t shrink-0 bg-slate-50 flex justify-end gap-2">
                       <button onClick={() => setShowConfig(false)} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg">Cancelar</button>
-                      <button onClick={handleSaveKeys} className="px-6 py-2 bg-simple-600 text-white font-bold rounded-lg hover:bg-simple-700 shadow-lg">Guardar y Recargar</button>
+                      <button onClick={handleSaveKeys} className="px-6 py-2 bg-ada-600 text-white font-bold rounded-lg hover:bg-ada-700 shadow-lg">Guardar y Recargar</button>
                   </div>
               </div>
           </div>

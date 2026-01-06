@@ -1,11 +1,11 @@
 import { User, Project, Gem, ProjectLog, Tool, Repository } from '../types';
 import { INITIAL_USERS, INITIAL_PROJECTS, INITIAL_GEMS, INITIAL_TOOLS } from '../constants';
 
-// Local Storage Keys - BUMPED TO V8 for Repository Migration
-const USERS_KEY = 'simpledata_users_v8'; 
-const PROJECTS_KEY = 'simpledata_projects_v8';
-const GEMS_KEY = 'simpledata_gems_v8';
-const TOOLS_KEY = 'simpledata_tools_v8';
+// Local Storage Keys - REBRANDED to ADA
+const USERS_KEY = 'ada_users_v1'; 
+const PROJECTS_KEY = 'ada_projects_v1';
+const GEMS_KEY = 'ada_gems_v1';
+const TOOLS_KEY = 'ada_tools_v1';
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -31,9 +31,6 @@ class DBService {
     let localTools: Tool[] = savedTools ? JSON.parse(savedTools) : [];
 
     // --- MIGRATION LOGIC FOR OLD PROJECTS (Convert driveLink/githubLink to repositories) ---
-    // This is crucial if we are loading old data from a previous version (or if we just bumped version but copy-pasted old JSON)
-    // Since we bumped the KEY to v8, localProjects will likely be empty initially unless user had v8 data.
-    // But if we ever needed to migrate:
     localProjects = localProjects.map((p: any) => {
         if (!p.repositories) {
             const newRepos: Repository[] = [];
@@ -64,8 +61,6 @@ class DBService {
     INITIAL_PROJECTS.forEach(initProj => {
         const existingProj = mergedProjectsMap.get(initProj.id);
         if (existingProj) {
-            // MERGE: Keep existing repositories if they exist, otherwise fallback or merge?
-            // Strategy: Trust local repositories if they exist and are not empty, else use init.
             const repos = (existingProj.repositories && existingProj.repositories.length > 0) 
                           ? existingProj.repositories 
                           : initProj.repositories;

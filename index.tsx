@@ -25,7 +25,7 @@ import { ChatMessage } from './types';
 
 const AIChatOverlay = ({ isOpen, onClose, currentUser }: { isOpen: boolean, onClose: () => void, currentUser: User }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: '1', role: 'model', text: `Hola ${currentUser.name.split(' ')[0]}! Soy el asistente de SimpleData.`, timestamp: new Date() }
+    { id: '1', role: 'model', text: `Hola ${currentUser.name.split(' ')[0]}! Soy el asistente de ADA.`, timestamp: new Date() }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -41,7 +41,7 @@ const AIChatOverlay = ({ isOpen, onClose, currentUser }: { isOpen: boolean, onCl
     setIsTyping(true);
 
     try {
-      const responseText = await generateText(input, `You are SimpleData's corporate AI assistant. Current user is ${currentUser.name}.`);
+      const responseText = await generateText(input, `You are ADA's corporate AI assistant. Current user is ${currentUser.name}.`);
       setMessages(prev => [...prev, { id: (Date.now()+1).toString(), role: 'model', text: responseText, timestamp: new Date() }]);
     } catch (e) {
       setMessages(prev => [...prev, { id: (Date.now()+1).toString(), role: 'model', text: "Error de conexión.", timestamp: new Date() }]);
@@ -54,14 +54,14 @@ const AIChatOverlay = ({ isOpen, onClose, currentUser }: { isOpen: boolean, onCl
 
   return (
     <div className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 w-[90vw] lg:w-96 h-[60vh] lg:h-[600px] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col z-[80] overflow-hidden animate-slide-up font-sans print:hidden">
-      <div className="bg-simple-900 p-4 flex justify-between items-center text-white">
-        <div className="flex items-center gap-2"><span className="font-semibold">SimpleData AI</span></div>
+      <div className="bg-ada-900 p-4 flex justify-between items-center text-white">
+        <div className="flex items-center gap-2"><span className="font-semibold">ADA AI</span></div>
         <button onClick={onClose}><Icon name="fa-times" /></button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
         {messages.map(msg => (
           <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-xl p-3 text-sm ${msg.role === 'user' ? 'bg-simple-600 text-white' : 'bg-white border'}`}>
+            <div className={`max-w-[85%] rounded-xl p-3 text-sm ${msg.role === 'user' ? 'bg-ada-600 text-white' : 'bg-white border'}`}>
               {msg.text}
             </div>
           </div>
@@ -71,7 +71,7 @@ const AIChatOverlay = ({ isOpen, onClose, currentUser }: { isOpen: boolean, onCl
       </div>
       <div className="p-3 bg-white border-t flex gap-2">
           <input className="flex-1 bg-slate-100 rounded-full px-4 text-sm" value={input} onChange={e => setInput(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleSend()} placeholder="Mensaje..." />
-          <button onClick={handleSend} className="p-2 text-simple-600"><Icon name="fa-paper-plane" /></button>
+          <button onClick={handleSend} className="p-2 text-ada-600"><Icon name="fa-paper-plane" /></button>
       </div>
     </div>
   );
@@ -190,7 +190,7 @@ const App = () => {
       {!isChatOpen && (
         <button 
             onClick={() => setIsChatOpen(true)} 
-            className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 w-12 h-12 lg:w-14 lg:h-14 bg-simple-900 text-white rounded-full shadow-lg hover:bg-simple-800 hover:scale-110 transition-all flex items-center justify-center text-xl lg:text-2xl z-40 print:hidden"
+            className="fixed bottom-24 right-4 lg:bottom-6 lg:right-6 w-12 h-12 lg:w-14 lg:h-14 bg-ada-900 text-white rounded-full shadow-lg hover:bg-ada-800 hover:scale-110 transition-all flex items-center justify-center text-xl lg:text-2xl z-40 print:hidden"
         >
             <Icon name="fa-comment-dots" />
         </button>

@@ -1,17 +1,13 @@
 import { User, UserRole, Project, Gem, Tool } from './types';
 
 // --- CONFIGURACIÓN DE ENTORNO (.ENV & LOCAL STORAGE) ---
-// Helper para leer variables en distintos entornos (Vite, CRA, Node) y LocalStorage
 const getEnvVar = (key: string): string => {
-  // 1. Intento estándar (Node / Webpack / CRA sin prefijo)
   if (typeof process !== 'undefined' && process.env && process.env[key]) {
     return process.env[key] as string;
   }
-  // 2. Intento Create React App (Prefijo REACT_APP_)
   if (typeof process !== 'undefined' && process.env && process.env[`REACT_APP_${key}`]) {
     return process.env[`REACT_APP_${key}`] as string;
   }
-  // 3. Intento Vite (import.meta.env)
   try {
     // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env) {
@@ -25,9 +21,9 @@ const getEnvVar = (key: string): string => {
   }
 
   // 4. FALBACK: Local Storage (Configuración Manual desde Dashboard)
-  // Esto permite que la app funcione si el usuario ingresa las llaves manualmente en la UI
+  // Updated prefix to 'ada_env_'
   if (typeof window !== 'undefined') {
-      const manualKey = localStorage.getItem(`simpledata_env_${key}`);
+      const manualKey = localStorage.getItem(`ada_env_${key}`);
       if (manualKey) return manualKey;
   }
   
@@ -35,23 +31,18 @@ const getEnvVar = (key: string): string => {
 };
 
 export const APP_CONFIG = {
-  // Busca: API_KEY, REACT_APP_API_KEY, VITE_API_KEY o localStorage
   GEMINI_API_KEY: getEnvVar('API_KEY'), 
-  
-  // Busca: GITHUB_TOKEN, REACT_APP_GITHUB_TOKEN, VITE_GITHUB_TOKEN o localStorage
   GITHUB_TOKEN: getEnvVar('GITHUB_TOKEN'),
-
-  // Busca: GOOGLE_CLIENT_ID para Drive Uploads
   GOOGLE_CLIENT_ID: getEnvVar('GOOGLE_CLIENT_ID')
 };
 
-// Real SimpleData Team
+// Real ADA Team
 export const INITIAL_USERS: User[] = [
   {
     id: 'u1',
     name: 'Gonzalo Arias',
     role: UserRole.CEO,
-    email: 'gonzalo.arias@simpledata.cl',
+    email: 'gonzalo.arias@ada.cl',
     password: '1234',
     avatar: 'https://ui-avatars.com/api/?name=Gonzalo+Arias&background=0D8ABC&color=fff',
     skills: [
@@ -66,7 +57,7 @@ export const INITIAL_USERS: User[] = [
     id: 'u2',
     name: 'Armin Salazar',
     role: UserRole.ADMIN, // Super Admin Privilege
-    email: 'soporte.aiwis@gmail.com',
+    email: 'soporte.aiwis@gmail.com', // Mantener email de soporte externo o cambiar a armin@ada.cl si se requiere
     password: '1234',
     avatar: 'https://ui-avatars.com/api/?name=Armin+Salazar&background=ff0000&color=fff',
     skills: [
@@ -81,7 +72,7 @@ export const INITIAL_USERS: User[] = [
     id: 'u3',
     name: 'Gabriel Martinez',
     role: UserRole.DEVELOPER,
-    email: 'gabriel.martinez@simpledata.cl',
+    email: 'gabriel.martinez@ada.cl',
     password: '1234',
     avatar: 'https://ui-avatars.com/api/?name=Gabriel+Martinez&background=random',
     skills: [
@@ -95,7 +86,7 @@ export const INITIAL_USERS: User[] = [
     id: 'u4',
     name: 'Francisco Valenzuela',
     role: UserRole.DEVELOPER,
-    email: 'francisco.valenzuela@simpledata.cl',
+    email: 'francisco.valenzuela@ada.cl',
     password: '1234',
     avatar: 'https://ui-avatars.com/api/?name=Francisco+Valenzuela&background=random',
     skills: [
@@ -109,7 +100,7 @@ export const INITIAL_USERS: User[] = [
     id: 'u5',
     name: 'Anibal Alcazar',
     role: UserRole.DEVELOPER,
-    email: 'anibal.alcazar@simpledata.cl',
+    email: 'anibal.alcazar@ada.cl',
     password: '1234',
     avatar: 'https://ui-avatars.com/api/?name=Anibal+Alcazar&background=random',
     skills: [
@@ -123,7 +114,7 @@ export const INITIAL_USERS: User[] = [
     id: 'u6',
     name: 'Juan Escalona',
     role: UserRole.DEVELOPER,
-    email: 'juan.escalona@simpledata.cl',
+    email: 'juan.escalona@ada.cl',
     password: '1234',
     avatar: 'https://ui-avatars.com/api/?name=Juan+Escalona&background=random',
     skills: [
@@ -137,7 +128,7 @@ export const INITIAL_USERS: User[] = [
     id: 'u7',
     name: 'Cristobal Arias',
     role: UserRole.DEVELOPER,
-    email: 'cristobal.ariasb@simpledata.cl',
+    email: 'cristobal.ariasb@ada.cl',
     password: '1234',
     avatar: 'https://ui-avatars.com/api/?name=Cristobal+Arias&background=random',
     skills: [
@@ -151,7 +142,7 @@ export const INITIAL_USERS: User[] = [
     id: 'u8',
     name: 'Alejandro Venegas',
     role: UserRole.ANALYST,
-    email: 'alejandro.venegas@simpledata.cl',
+    email: 'alejandro.venegas@ada.cl',
     password: '1234',
     avatar: 'https://ui-avatars.com/api/?name=Alejandro+Venegas&background=random',
     skills: [
@@ -165,7 +156,7 @@ export const INITIAL_USERS: User[] = [
     id: 'u9',
     name: 'Fernando Cid',
     role: UserRole.DESIGNER,
-    email: 'fernando.cid@simpledata.cl',
+    email: 'fernando.cid@ada.cl',
     password: '1234',
     avatar: 'https://ui-avatars.com/api/?name=Fernando+Cid&background=random',
     skills: [
@@ -181,7 +172,7 @@ export const INITIAL_PROJECTS: Project[] = [
   {
     id: 'PROYECTO_001',
     name: 'Sistema de Facturación Interna',
-    client: 'Interno SimpleData',
+    client: 'Interno ADA',
     encargadoCliente: 'Gerencia Admin',
     leadId: 'u2',
     teamIds: ['u3', 'u8', 'u1', 'u2'],
@@ -199,7 +190,7 @@ export const INITIAL_PROJECTS: Project[] = [
       { id: 'l2', date: '2025-02-12T14:30:00', text: 'Reunión con contabilidad para definir esquema de base de datos.', author: 'Gabriel Martinez' }
     ],
     repositories: [
-        { id: 'r1', type: 'github', alias: 'Repositorio Fuente', url: 'https://github.com/soporteaiwis-lab/SIMPLEDATA-APP' },
+        { id: 'r1', type: 'github', alias: 'Repositorio Fuente', url: 'https://github.com/soporteaiwis-lab/SIMPLEDATA-APP' }, // Keep URL legacy or update if repo changes
         { id: 'r2', type: 'drive', alias: 'Documentación Oficial', url: 'https://drive.google.com/drive/folders/1S3Zavf6xdp9WaM8-gowBJImdkmSD_Niw' }
     ]
   },

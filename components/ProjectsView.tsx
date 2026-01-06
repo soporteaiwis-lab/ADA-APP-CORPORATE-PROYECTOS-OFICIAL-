@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Project, User, UserRole, ProjectLog } from '../types';
-import { RepositoryManager } from './RepositoryManager'; // NEW IMPORT
+import { RepositoryManager } from './RepositoryManager'; 
 
 const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
   <i className={`fa-solid ${name} ${className}`}></i>
@@ -27,21 +27,19 @@ export const ProjectsView = ({
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [showReqModal, setShowReqModal] = useState(false);
   
-  // NEW STATE: Repository Manager
   const [repoManagerConfig, setRepoManagerConfig] = useState<{ project: Project, type: 'github' | 'drive' } | null>(null);
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [filters, setFilters] = useState({ name: '', client: '', status: 'En Curso' });
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  // Expanded New Project State
   const [newProject, setNewProject] = useState<Partial<Project>>({
     name: '', 
     client: '', 
     status: 'En Curso', 
     progress: 0, 
     description: '', 
-    repositories: [], // Init empty
+    repositories: [], 
     startDate: new Date().toISOString().split('T')[0],
     deadline: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
     teamIds: []
@@ -49,7 +47,6 @@ export const ProjectsView = ({
 
   const [editProjectData, setEditProjectData] = useState<Partial<Project>>({});
 
-  // --- Handlers ---
   const handleCreate = () => {
     if (!newProject.name || !newProject.client) return;
     const project: Project = {
@@ -69,11 +66,10 @@ export const ProjectsView = ({
       report: newProject.status === 'En Curso',
       year: parseInt(newProject.startDate?.split('-')[0] || '2025'),
       logs: [],
-      repositories: [] // Start empty, user adds later via manager
+      repositories: [] 
     };
     onAddProject(project);
     setShowCreateModal(false);
-    // Reset form
     setNewProject({ 
         name: '', client: '', status: 'En Curso', progress: 0, description: '', repositories: [],
         startDate: new Date().toISOString().split('T')[0],
@@ -107,7 +103,6 @@ export const ProjectsView = ({
       } 
   };
   
-  // REPLACED OLD TRIGGER UPLOAD WITH REPO MANAGER OPENER
   const openRepoManager = (project: Project, type: 'github' | 'drive') => {
       setRepoManagerConfig({ project, type });
       setActiveMenuId(null);
@@ -136,7 +131,6 @@ export const ProjectsView = ({
   return (
     <div className="space-y-6 print:hidden pb-24 lg:pb-0">
        
-       {/* NEW REPO MANAGER MODAL */}
        {repoManagerConfig && (
            <RepositoryManager 
                project={repoManagerConfig.project}
@@ -149,8 +143,8 @@ export const ProjectsView = ({
 
        <div className="flex flex-col gap-4">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <h2 className="text-2xl font-bold text-simple-900">Gestión de Proyectos</h2>
-            <button onClick={() => setShowCreateModal(true)} className="w-full lg:w-auto bg-simple-600 hover:bg-simple-700 text-white px-4 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors shadow-md flex items-center justify-center">
+            <h2 className="text-2xl font-bold text-ada-900">Gestión de Proyectos</h2>
+            <button onClick={() => setShowCreateModal(true)} className="w-full lg:w-auto bg-ada-600 hover:bg-ada-700 text-white px-4 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors shadow-md flex items-center justify-center">
             <Icon name="fa-plus" className="mr-2" /> Nuevo Proyecto
             </button>
         </div>
@@ -205,7 +199,6 @@ export const ProjectsView = ({
                     <td className="p-3 text-center"><span className={`px-2 py-1 rounded-full text-xs font-bold ${project.status === 'En Curso'?'bg-green-100 text-green-700':'bg-slate-200 text-slate-500'}`}>{project.status==='En Curso'?'Activo':'Fin'}</span></td>
                     <td className="p-3 text-center">
                         <div className="flex justify-center gap-1">
-                            {/* UPDATED: Buttons now open RepositoryManager */}
                             <button onClick={()=>openRepoManager(project,'drive')} className="p-1 relative group">
                                 <Icon name="fab fa-google-drive" className={`text-lg ${project.repositories?.some(r=>r.type==='drive') ? 'text-green-600' : 'text-slate-300'}`}/>
                                 <span className="absolute bottom-full left-1/2 -translate-x-1/2 bg-black text-white text-[10px] p-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">Drive</span>
@@ -322,8 +315,8 @@ export const ProjectsView = ({
                          <h4 className="text-sm font-bold text-slate-400 uppercase mb-2">Asignar Equipo Inicial</h4>
                          <div className="border rounded-lg p-2 max-h-40 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
                              {users.map(u => (
-                                 <label key={u.id} className={`flex items-center gap-2 p-2 rounded cursor-pointer border ${newProject.teamIds?.includes(u.id) ? 'bg-simple-50 border-simple-200' : 'border-transparent hover:bg-slate-50'}`}>
-                                     <input type="checkbox" checked={newProject.teamIds?.includes(u.id)} onChange={() => toggleNewProjectTeamMember(u.id)} className="rounded text-simple-600 focus:ring-simple-500" />
+                                 <label key={u.id} className={`flex items-center gap-2 p-2 rounded cursor-pointer border ${newProject.teamIds?.includes(u.id) ? 'bg-ada-50 border-ada-200' : 'border-transparent hover:bg-slate-50'}`}>
+                                     <input type="checkbox" checked={newProject.teamIds?.includes(u.id)} onChange={() => toggleNewProjectTeamMember(u.id)} className="rounded text-ada-600 focus:ring-ada-500" />
                                      <img src={u.avatar} className="w-6 h-6 rounded-full" />
                                      <span className="text-sm">{u.name}</span>
                                  </label>
@@ -333,13 +326,12 @@ export const ProjectsView = ({
                  )}
              </div>
              <div className="p-4 border-t bg-slate-50 md:rounded-b-2xl">
-                <button onClick={showEditModal ? handleUpdate : handleCreate} className="w-full py-3 bg-simple-600 text-white font-bold rounded-lg shadow-lg">Guardar</button>
+                <button onClick={showEditModal ? handleUpdate : handleCreate} className="w-full py-3 bg-ada-600 text-white font-bold rounded-lg shadow-lg">Guardar</button>
              </div>
           </div>
         </div>
       )}
       
-      {/* Keeping other modals (Log, Team, Req) same as before but hidden for brevity in diff as they didn't change logic, just re-rendered */}
       {showLogModal && selectedProject && (
           <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center">
               <div className="w-full h-full md:h-[600px] md:max-w-[600px] bg-white md:rounded-2xl flex flex-col shadow-2xl">
@@ -379,8 +371,8 @@ export const ProjectsView = ({
                      {users.map(u => {
                          const isSelected = selectedProject.teamIds.includes(u.id);
                          return (
-                             <div key={u.id} onClick={() => handleToggleTeamMember(u.id)} className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${isSelected ? 'bg-simple-50 border-simple-200' : 'bg-white border-slate-100'}`}>
-                                 <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected ? 'bg-simple-600 border-simple-600' : 'border-slate-300'}`}>
+                             <div key={u.id} onClick={() => handleToggleTeamMember(u.id)} className={`p-3 rounded-xl border flex items-center gap-3 cursor-pointer transition-all ${isSelected ? 'bg-ada-50 border-ada-200' : 'bg-white border-slate-100'}`}>
+                                 <div className={`w-5 h-5 rounded border flex items-center justify-center ${isSelected ? 'bg-ada-600 border-ada-600' : 'border-slate-300'}`}>
                                      {isSelected && <Icon name="fa-check" className="text-white text-xs"/>}
                                  </div>
                                  <img src={u.avatar} className="w-8 h-8 rounded-full" />

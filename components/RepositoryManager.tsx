@@ -35,8 +35,8 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
   // --- GITHUB TOKEN LOGIC (RESTORED TO CLASSIC) ---
   // We read directly from the key used in Dashboard to avoid sync issues
   const getStoredGithubToken = () => {
-      // Prioritize the Dashboard Key
-      return localStorage.getItem('simpledata_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN || '';
+      // Prioritize the Dashboard Key - UPDATED TO ADA KEY
+      return localStorage.getItem('ada_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN || '';
   };
 
   const [githubToken, setGithubToken] = useState(getStoredGithubToken());
@@ -320,7 +320,7 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
       if (activeTab === 'github') {
           setSelectedRepoId(repoId);
           // READ TOKEN DIRECTLY FROM STORAGE TO AVOID STALE STATE
-          const storedToken = localStorage.getItem('simpledata_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN;
+          const storedToken = localStorage.getItem('ada_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN;
           
           if (!storedToken || storedToken.length < 5) {
               setShowTokenInput(true); // Only show if genuinely missing
@@ -402,7 +402,7 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
   const uploadToGitHubReal = async (file: File, repo: Repository) => {
       try {
           // 1. Get Token Forcefully
-          const effectiveToken = localStorage.getItem('simpledata_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN;
+          const effectiveToken = localStorage.getItem('ada_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN;
           if (!effectiveToken) throw new Error("Token de GitHub no encontrado en configuración.");
 
           setUploadStatusMsg('Verificando repositorio...');
@@ -445,7 +445,7 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                   'Accept': 'application/vnd.github.v3+json'
               },
               body: JSON.stringify({
-                  message: `Upload ${file.name} via SimpleData Portal (${new Date().toISOString()})`,
+                  message: `Upload ${file.name} via ADA Portal (${new Date().toISOString()})`,
                   content: base64Content
               })
           });
@@ -628,7 +628,7 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                                 onChange={e => {
                                     setGithubToken(e.target.value);
                                     // Save to Dashboard key to fix sync permanently
-                                    localStorage.setItem('simpledata_env_GITHUB_TOKEN', e.target.value);
+                                    localStorage.setItem('ada_env_GITHUB_TOKEN', e.target.value);
                                 }}
                             />
                             <div className="flex gap-2">
