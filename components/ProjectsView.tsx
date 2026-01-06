@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Project, User, UserRole, ProjectLog } from '../types';
+import { Project, User, UserRole, ProjectLog, Repository } from '../types';
 import { RepositoryManager } from './RepositoryManager'; 
 
 const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
@@ -33,7 +33,8 @@ export const ProjectsView = ({
   const [filters, setFilters] = useState({ name: '', client: '', status: 'En Curso' });
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const [newProject, setNewProject] = useState<Partial<Project>>({
+  // New Project State (includes manual fields for ID and Repos)
+  const [newProject, setNewProject] = useState<Partial<Project> & { manualId?: string, repoGithub?: string, repoDrive?: string }>({
     name: '', 
     client: '', 
     status: 'En Curso', 
@@ -64,10 +65,56 @@ export const ProjectsView = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Calculate Next ID logic
+  const getNextProjectId = () => {
+      const numbers = projects.map(p => parseInt(p.id.replace(/\D/g, '')) || 0);
+      const max = Math.max(0, ...numbers);
+      return `PROYECTO_${String(max + 1).padStart(3, '0')}`;
+  };
+
+  const openCreateModal = () => {
+      const nextId = getNextProjectId();
+      setNewProject({
+        name: '', 
+        client: '', 
+        status: 'En Curso', 
+        progress: 0, 
+        description: '', 
+        repositories: [], 
+        startDate: new Date().toISOString().split('T')[0],
+        deadline: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
+        teamIds: [],
+        manualId: nextId,
+        repoGithub: 'https://github.com/soporteaiwis-lab/ADA-APP-CORPORATE-PROYECTOS-OFICIAL-',
+        repoDrive: ''
+      });
+      setShowCreateModal(true);
+  };
+
   const handleCreate = () => {
-    if (!newProject.name || !newProject.client) return;
+    if (!newProject.name || !newProject.client || !newProject.manualId) return;
+    
+    // Construct Repositories based on manual input
+    const initialRepos: Repository[] = [];
+    if (newProject.repoGithub) {
+        initialRepos.push({
+            id: `r_gh_${Date.now()}`,
+            type: 'github',
+            alias: 'Repositorio Oficial',
+            url: newProject.repoGithub
+        });
+    }
+    if (newProject.repoDrive) {
+        initialRepos.push({
+            id: `r_dr_${Date.now()}`,
+            type: 'drive',
+            alias: 'Carpeta Drive Oficial',
+            url: newProject.repoDrive
+        });
+    }
+
     const project: Project = {
-      id: 'PROYECTO_' + Math.floor(Math.random() * 1000).toString().padStart(3, '0'),
+      id: newProject.manualId, // Use the manually editable ID
       name: newProject.name,
       client: newProject.client,
       encargadoCliente: newProject.encargadoCliente || 'Sin Asignar',
@@ -83,24 +130,10 @@ export const ProjectsView = ({
       report: newProject.status === 'En Curso',
       year: parseInt(newProject.startDate?.split('-')[0] || '2025'),
       logs: [],
-      // DEFAULT GITHUB REPOSITORY ASSIGNMENT
-      repositories: [
-          {
-              id: `r_def_${Date.now()}`,
-              type: 'github',
-              alias: 'Repositorio Oficial',
-              url: 'https://github.com/soporteaiwis-lab/ADA-APP-CORPORATE-PROYECTOS-OFICIAL-'
-          }
-      ] 
+      repositories: initialRepos
     };
     onAddProject(project);
     setShowCreateModal(false);
-    setNewProject({ 
-        name: '', client: '', status: 'En Curso', progress: 0, description: '', repositories: [],
-        startDate: new Date().toISOString().split('T')[0],
-        deadline: '',
-        teamIds: []
-    });
   };
 
   const toggleNewProjectTeamMember = (userId: string) => {
@@ -169,7 +202,7 @@ export const ProjectsView = ({
        <div className="flex flex-col gap-4">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <h2 className="text-2xl font-bold text-ada-900">Gestión de Proyectos</h2>
-            <button onClick={() => setShowCreateModal(true)} className="w-full lg:w-auto bg-ada-600 hover:bg-ada-700 text-white px-4 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors shadow-md flex items-center justify-center">
+            <button onClick={openCreateModal} className="w-full lg:w-auto bg-ada-600 hover:bg-ada-700 text-white px-4 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors shadow-md flex items-center justify-center">
             <Icon name="fa-plus" className="mr-2" /> Nuevo Proyecto
             </button>
         </div>
@@ -217,7 +250,11 @@ export const ProjectsView = ({
             <tbody className="divide-y divide-slate-100">
               {filteredProjects.map(project => (
                   <tr key={project.id} className="hover:bg-slate-50">
-                    <td className="p-3"><div className="font-bold truncate">{project.name}</div><button onClick={()=>handleOpenReq(project)} className="text-xs text-blue-500 hover:underline">Ver Resumen</button></td>
+                    <td className="p-3">
+                        <div className="font-bold truncate">{project.name}</div>
+                        <div className="text-[10px] text-slate-400 font-mono">{project.id}</div>
+                        <button onClick={()=>handleOpenReq(project)} className="text-xs text-blue-500 hover:underline">Ver Resumen</button>
+                    </td>
                     <td className="p-3"><div className="truncate">{project.client}</div></td>
                     <td className="p-3 text-center"><button onClick={()=>handleOpenTeam(project)} className="w-8 h-8 rounded-full border hover:bg-slate-100"><Icon name="fa-users-cog"/></button></td>
                     <td className="p-3 text-xs"><div>In: {new Date(project.startDate || '').toLocaleDateString()}</div><div>Fin: {new Date(project.deadline).toLocaleDateString()}</div></td>
@@ -249,6 +286,7 @@ export const ProjectsView = ({
               <div className="flex justify-between items-start">
                  <div className="flex-1 mr-2">
                     <h3 className="font-bold text-slate-900 text-lg leading-tight mb-1">{project.name}</h3>
+                    <p className="text-xs text-slate-400 font-mono mb-1">{project.id}</p>
                     <p className="text-sm text-slate-500 font-medium">{project.client}</p>
                  </div>
                  <span className={`shrink-0 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${project.status === 'En Curso' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
@@ -300,9 +338,34 @@ export const ProjectsView = ({
                  {/* Basic Info */}
                  <div className="space-y-4">
                      <h4 className="text-sm font-bold text-slate-400 uppercase">Información General</h4>
+                     {!showEditModal && (
+                         <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                             <label className="block text-xs font-bold text-blue-700 uppercase mb-1">ID Correlativo (Autogenerado)</label>
+                             <input 
+                                className="w-full bg-white border border-blue-200 p-2 rounded text-blue-900 font-mono font-bold" 
+                                value={newProject.manualId} 
+                                onChange={e => setNewProject({...newProject, manualId: e.target.value})} 
+                             />
+                         </div>
+                     )}
                      <input className="w-full border p-3 rounded-lg" placeholder="Nombre Proyecto" value={showEditModal ? editProjectData.name : newProject.name} onChange={e => showEditModal ? setEditProjectData({...editProjectData, name: e.target.value}) : setNewProject({...newProject, name: e.target.value})} />
                      <input className="w-full border p-3 rounded-lg" placeholder="Cliente" value={showEditModal ? editProjectData.client : newProject.client} onChange={e => showEditModal ? setEditProjectData({...editProjectData, client: e.target.value}) : setNewProject({...newProject, client: e.target.value})} />
                  </div>
+
+                 {/* New: Manual Repositories (Only Create) */}
+                 {!showEditModal && (
+                     <div className="space-y-3">
+                         <h4 className="text-sm font-bold text-slate-400 uppercase">Repositorios Iniciales</h4>
+                         <div>
+                             <label className="block text-xs font-bold text-slate-500 mb-1">Enlace GitHub</label>
+                             <input className="w-full border p-3 rounded-lg text-sm font-mono" placeholder="https://github.com/..." value={newProject.repoGithub} onChange={e => setNewProject({...newProject, repoGithub: e.target.value})} />
+                         </div>
+                         <div>
+                             <label className="block text-xs font-bold text-slate-500 mb-1">Enlace Drive</label>
+                             <input className="w-full border p-3 rounded-lg text-sm font-mono" placeholder="https://drive.google.com/..." value={newProject.repoDrive} onChange={e => setNewProject({...newProject, repoDrive: e.target.value})} />
+                         </div>
+                     </div>
+                 )}
 
                  {/* Status for Edit Mode */}
                  {showEditModal && (

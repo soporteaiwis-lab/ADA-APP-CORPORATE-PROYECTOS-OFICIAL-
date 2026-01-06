@@ -122,9 +122,13 @@ class DBService {
 
   async getGems() { await delay(200); return [...this.gems]; }
   async addGem(g: Gem) { await delay(300); this.gems.push(g); this.saveAll(); }
+  async updateGem(g: Gem) { await delay(300); const idx = this.gems.findIndex(x => x.id === g.id); if(idx !== -1) { this.gems[idx] = g; this.saveAll(); } }
+  async deleteGem(id: string) { await delay(300); this.gems = this.gems.filter(x => x.id !== id); this.saveAll(); }
 
   async getTools() { await delay(200); return [...this.tools]; }
   async addTool(t: Tool) { await delay(300); this.tools.push(t); this.saveAll(); }
+  async updateTool(t: Tool) { await delay(300); const idx = this.tools.findIndex(x => x.id === t.id); if(idx !== -1) { this.tools[idx] = t; this.saveAll(); } }
+  async deleteTool(id: string) { await delay(300); this.tools = this.tools.filter(x => x.id !== id); this.saveAll(); }
 }
 
 export const db = new DBService();

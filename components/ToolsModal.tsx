@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Tool } from '../types';
+import { Tool, User, UserRole } from '../types';
 
 const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
   <i className={`fa-solid ${name} ${className}`}></i>
@@ -15,13 +15,25 @@ const URI_SCHEMES = [
     { name: 'Reloj', scheme: 'ms-clock:', icon: 'fa-clock' }
 ];
 
-export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void, tools: Tool[], onAddTool: (t: Tool) => void }) => {
+interface ToolsModalProps {
+    onClose: () => void;
+    tools: Tool[];
+    onAddTool: (t: Tool) => void;
+    onUpdateTool: (t: Tool) => void;
+    onDeleteTool: (id: string) => void;
+    currentUser: User;
+}
+
+export const ToolsModal = ({ onClose, tools, onAddTool, onUpdateTool, onDeleteTool, currentUser }: ToolsModalProps) => {
   const [isAdding, setIsAdding] = useState(false);
-  const [newTool, setNewTool] = useState({ name: '', url: '', icon: 'fa-cube' });
+  const [editingTool, setEditingTool] = useState<Tool | null>(null);
+  const [formData, setFormData] = useState({ name: '', url: '', icon: 'fa-cube' });
   
-  // New State for "Launcher Assistant" to fix the "stale copy" bug
+  // New State for "Launcher Assistant"
   const [selectedLocalTool, setSelectedLocalTool] = useState<Tool | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  const isAdmin = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.CEO;
 
   // ESC Listener
   useEffect(() => {
@@ -32,41 +44,70 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const handleAddTool = () => {
-    if(!newTool.name || !newTool.url) return;
+  const openAdd = () => {
+      setEditingTool(null);
+      setFormData({ name: '', url: '', icon: 'fa-cube' });
+      setIsAdding(true);
+  };
+
+  const openEdit = (t: Tool) => {
+      setEditingTool(t);
+      setFormData({ name: t.name, url: t.url, icon: t.icon });
+      setIsAdding(true);
+  };
+
+  const handleDelete = (id: string) => {
+      if (confirm("¿Eliminar esta herramienta?")) {
+          onDeleteTool(id);
+      }
+  };
+
+  const handleSaveTool = () => {
+    if(!formData.name || !formData.url) return;
     
     // Auto-detect local path pattern or URI scheme
-    // If it doesn't start with http/https, we treat it as "System/Local"
-    const isWebUrl = newTool.url.startsWith('http') || newTool.url.startsWith('https');
+    const isWebUrl = formData.url.startsWith('http') || formData.url.startsWith('https');
     
-    onAddTool({
-        id: 't' + Date.now(),
-        name: newTool.name,
-        url: newTool.url,
-        icon: newTool.icon,
-        color: isWebUrl ? 'text-blue-400' : 'text-orange-400',
-        isLocal: !isWebUrl
-    });
+    if (editingTool) {
+        onUpdateTool({
+            ...editingTool,
+            name: formData.name,
+            url: formData.url,
+            icon: formData.icon,
+            color: isWebUrl ? 'text-blue-400' : 'text-orange-400',
+            isLocal: !isWebUrl
+        });
+    } else {
+        onAddTool({
+            id: 't' + Date.now(),
+            name: formData.name,
+            url: formData.url,
+            icon: formData.icon,
+            color: isWebUrl ? 'text-blue-400' : 'text-orange-400',
+            isLocal: !isWebUrl
+        });
+    }
     
     setIsAdding(false);
-    setNewTool({ name: '', url: '', icon: 'fa-cube' });
+    setEditingTool(null);
   };
 
   const handleToolClick = (e: React.MouseEvent, tool: Tool) => {
+      // Prevent click if clicking edit/delete buttons (handled by stopping propagation in buttons, but safety check here)
+      
       // 1. Identify Type
       const isWebUrl = tool.url.startsWith('http') || tool.url.startsWith('https');
       const isProtocol = tool.url.includes(':') && !tool.url.includes('C:') && !tool.url.includes('/'); 
 
       // 2. If it's a Web URL or a Direct Protocol (like 'calculator:'), let the browser handle it
       if (isWebUrl || isProtocol) {
-          // Allow default behavior (href target blank)
           return;
       }
 
       // 3. If it's a Local File Path (C:\...), block default and show Assistant
       e.preventDefault();
       setCopySuccess(false);
-      setSelectedLocalTool(tool); // Set the specific tool clicked
+      setSelectedLocalTool(tool); 
   };
 
   const handleCopyPath = () => {
@@ -98,41 +139,52 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
         {/* Tools Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 justify-items-center w-full max-w-5xl pb-24 md:pb-0">
             {tools.map((tool) => (
-                <a 
-                    key={tool.id} 
-                    href={tool.url} 
-                    target="_blank"
-                    onClick={(e) => handleToolClick(e, tool)}
-                    className="flex flex-col items-center gap-3 group w-full p-2 cursor-pointer relative"
-                >
-                    <div className={`w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10 group-hover:scale-110 group-hover:bg-white/10 group-hover:border-ada-400 transition-all duration-300 shadow-xl relative overflow-hidden`}>
-                        <Icon name={tool.icon} className={`text-3xl ${tool.color}`} />
-                        
-                        {/* Type Indicator */}
-                        {tool.isLocal && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-orange-500/80 text-[9px] text-white text-center py-0.5 font-bold uppercase">
-                                Local
-                            </div>
-                        )}
-                    </div>
-                    <span className="text-white text-sm font-medium group-hover:text-ada-accent transition-colors text-center truncate w-full px-1">{tool.name}</span>
-                </a>
+                <div key={tool.id} className="relative group w-full flex flex-col items-center">
+                    <a 
+                        href={tool.url} 
+                        target="_blank"
+                        onClick={(e) => handleToolClick(e, tool)}
+                        className="flex flex-col items-center gap-3 w-full p-2 cursor-pointer"
+                    >
+                        <div className={`w-20 h-20 bg-white/5 rounded-2xl flex items-center justify-center backdrop-blur-sm border border-white/10 group-hover:scale-110 group-hover:bg-white/10 group-hover:border-ada-400 transition-all duration-300 shadow-xl relative overflow-hidden`}>
+                            <Icon name={tool.icon} className={`text-3xl ${tool.color}`} />
+                            
+                            {/* Type Indicator */}
+                            {tool.isLocal && (
+                                <div className="absolute bottom-0 left-0 right-0 bg-orange-500/80 text-[9px] text-white text-center py-0.5 font-bold uppercase">
+                                    Local
+                                </div>
+                            )}
+                        </div>
+                        <span className="text-white text-sm font-medium group-hover:text-ada-accent transition-colors text-center truncate w-full px-1">{tool.name}</span>
+                    </a>
+                    
+                    {/* Admin Actions - ALWAYS VISIBLE */}
+                    {isAdmin && (
+                        <div className="absolute top-0 right-2 flex gap-1 z-10">
+                            <button onClick={() => openEdit(tool)} className="w-6 h-6 bg-slate-700/80 hover:bg-blue-600 rounded-full text-white text-[10px] flex items-center justify-center"><Icon name="fa-pen"/></button>
+                            <button onClick={() => handleDelete(tool.id)} className="w-6 h-6 bg-slate-700/80 hover:bg-red-600 rounded-full text-white text-[10px] flex items-center justify-center"><Icon name="fa-trash"/></button>
+                        </div>
+                    )}
+                </div>
             ))}
 
             {/* Add Button */}
-            <button 
-                onClick={() => setIsAdding(true)}
-                className="flex flex-col items-center gap-3 group w-full p-2"
-            >
-                <div className="w-20 h-20 bg-ada-600/10 rounded-2xl flex items-center justify-center border-2 border-dashed border-ada-500/30 group-hover:bg-ada-600 group-hover:border-ada-500 group-hover:scale-105 transition-all duration-300">
-                    <Icon name="fa-plus" className="text-2xl text-ada-400 group-hover:text-white" />
-                </div>
-                <span className="text-white/50 text-sm font-medium group-hover:text-white transition-colors">Nuevo</span>
-            </button>
+            {isAdmin && (
+                <button 
+                    onClick={openAdd}
+                    className="flex flex-col items-center gap-3 group w-full p-2"
+                >
+                    <div className="w-20 h-20 bg-ada-600/10 rounded-2xl flex items-center justify-center border-2 border-dashed border-ada-500/30 group-hover:bg-ada-600 group-hover:border-ada-500 group-hover:scale-105 transition-all duration-300">
+                        <Icon name="fa-plus" className="text-2xl text-ada-400 group-hover:text-white" />
+                    </div>
+                    <span className="text-white/50 text-sm font-medium group-hover:text-white transition-colors">Nuevo</span>
+                </button>
+            )}
         </div>
       </div>
 
-      {/* --- MODAL 1: LOCAL APP LAUNCHER ASSISTANT (Fixes the "Stuck" issue) --- */}
+      {/* --- MODAL 1: LOCAL APP LAUNCHER ASSISTANT --- */}
       {selectedLocalTool && (
         <div className="fixed inset-0 z-[90] bg-black/80 flex items-center justify-center p-4 animate-scale-up backdrop-blur-sm">
             <div className="bg-white rounded-2xl max-w-md w-full p-6 relative shadow-2xl flex flex-col md:max-h-[90vh]">
@@ -175,13 +227,13 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
         </div>
       )}
 
-      {/* --- MODAL 2: ADD NEW TOOL --- */}
+      {/* --- MODAL 2: ADD/EDIT TOOL --- */}
       {isAdding && (
             <div className="absolute inset-0 bg-slate-900/90 flex items-center justify-center p-4 z-[90] animate-scale-up">
                 <div className="bg-slate-800 rounded-2xl w-full max-w-lg p-6 border border-slate-700 shadow-2xl flex flex-col md:max-h-[90vh] overflow-hidden">
                     <div className="flex justify-between items-center mb-6 shrink-0">
-                        <h3 className="text-white text-xl font-bold">Agregar Herramienta</h3>
-                        <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-white"><Icon name="fa-times" /></button>
+                        <h3 className="text-white text-xl font-bold">{editingTool ? 'Editar Herramienta' : 'Agregar Herramienta'}</h3>
+                        <button onClick={() => {setIsAdding(false); setEditingTool(null);}} className="text-slate-400 hover:text-white"><Icon name="fa-times" /></button>
                     </div>
 
                     <div className="space-y-4 overflow-y-auto flex-1">
@@ -190,8 +242,8 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
                             <input 
                                 className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg mt-1 focus:border-ada-500 outline-none" 
                                 placeholder="Ej. Calculadora" 
-                                value={newTool.name}
-                                onChange={e => setNewTool({...newTool, name: e.target.value})}
+                                value={formData.name}
+                                onChange={e => setFormData({...formData, name: e.target.value})}
                             />
                         </div>
                         <div>
@@ -199,8 +251,8 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
                             <input 
                                 className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg mt-1 focus:border-ada-500 outline-none font-mono text-sm" 
                                 placeholder="https://... o C:\... o calculator:" 
-                                value={newTool.url}
-                                onChange={e => setNewTool({...newTool, url: e.target.value})}
+                                value={formData.url}
+                                onChange={e => setFormData({...formData, url: e.target.value})}
                             />
                         </div>
                         
@@ -211,7 +263,7 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
                                 {URI_SCHEMES.map(s => (
                                     <button 
                                         key={s.scheme}
-                                        onClick={() => setNewTool({ ...newTool, url: s.scheme, name: newTool.name || s.name, icon: s.icon })}
+                                        onClick={() => setFormData({ ...formData, url: s.scheme, name: formData.name || s.name, icon: s.icon })}
                                         className="text-[10px] bg-slate-700 hover:bg-slate-600 text-white px-2 py-1 rounded border border-slate-600 transition-colors"
                                     >
                                         {s.name}
@@ -225,15 +277,15 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
                             <input 
                                 className="w-full bg-slate-900 border border-slate-600 text-white p-3 rounded-lg mt-1 focus:border-ada-500 outline-none" 
                                 placeholder="fa-cube" 
-                                value={newTool.icon}
-                                onChange={e => setNewTool({...newTool, icon: e.target.value})}
+                                value={formData.icon}
+                                onChange={e => setFormData({...formData, icon: e.target.value})}
                             />
                         </div>
                     </div>
 
                     <div className="flex gap-3 mt-8 shrink-0">
-                        <button onClick={() => setIsAdding(false)} className="flex-1 py-3 text-slate-400 hover:bg-slate-700 rounded-lg">Cancelar</button>
-                        <button onClick={handleAddTool} className="flex-1 py-3 bg-ada-600 hover:bg-ada-500 text-white rounded-lg font-bold">Agregar</button>
+                        <button onClick={() => {setIsAdding(false); setEditingTool(null);}} className="flex-1 py-3 text-slate-400 hover:bg-slate-700 rounded-lg">Cancelar</button>
+                        <button onClick={handleSaveTool} className="flex-1 py-3 bg-ada-600 hover:bg-ada-500 text-white rounded-lg font-bold">Guardar</button>
                     </div>
                 </div>
             </div>

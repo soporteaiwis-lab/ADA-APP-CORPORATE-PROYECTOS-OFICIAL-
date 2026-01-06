@@ -114,12 +114,16 @@ const App = () => {
   const handleDeleteProject = async (id: string) => { await db.deleteProject(id); loadData(); };
   
   const handleAddGem = async (g: Gem) => { await db.addGem(g); loadData(); };
+  const handleUpdateGem = async (g: Gem) => { await db.updateGem(g); loadData(); };
+  const handleDeleteGem = async (id: string) => { await db.deleteGem(id); loadData(); };
   
   const handleAddUser = async (u: User) => { await db.addUser(u); loadData(); };
   const handleUpdateUser = async (u: User) => { await db.updateUser(u); loadData(); };
   const handleDeleteUser = async (id: string) => { await db.deleteUser(id); loadData(); };
   
   const handleAddTool = async (t: Tool) => { await db.addTool(t); loadData(); };
+  const handleUpdateTool = async (t: Tool) => { await db.updateTool(t); loadData(); };
+  const handleDeleteTool = async (id: string) => { await db.deleteTool(id); loadData(); };
 
   const handleResetDB = async () => {
       await db.resetToDefaults();
@@ -143,7 +147,7 @@ const App = () => {
       <main className="flex-1 lg:ml-64 p-4 lg:p-8 relative">
         {route === AppRoute.DASHBOARD && <Dashboard currentUser={user} projects={dbProjects} />}
         {route === AppRoute.PROJECTS && <ProjectsView projects={dbProjects} users={dbUsers} currentUser={user} onAddProject={handleAddProject} onDeleteProject={handleDeleteProject} onUpdateProject={handleUpdateProject} />}
-        {route === AppRoute.GEMS && <GemsView gems={dbGems} onAddGem={handleAddGem} />}
+        {route === AppRoute.GEMS && <GemsView gems={dbGems} onAddGem={handleAddGem} onUpdateGem={handleUpdateGem} onDeleteGem={handleDeleteGem} currentUser={user} />}
         {route === AppRoute.TEAM && <TeamView users={dbUsers} currentUser={user} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} />}
         {route === AppRoute.REPORTS && <ReportsView currentUser={user} projects={dbProjects} onUpdateProject={handleUpdateProject} />}
         {route === AppRoute.ADMIN && <AdminUsersView users={dbUsers} projects={dbProjects} onAddUser={handleAddUser} onUpdateUser={handleUpdateUser} onDeleteUser={handleDeleteUser} onUpdateProject={handleUpdateProject} onResetDB={handleResetDB} />}
@@ -165,7 +169,7 @@ const App = () => {
 
       <MobileNav currentRoute={route} onNavigate={setRoute} currentUser={user} />
 
-      {isToolsOpen && <ToolsModal onClose={() => setIsToolsOpen(false)} tools={dbTools} onAddTool={handleAddTool} />}
+      {isToolsOpen && <ToolsModal onClose={() => setIsToolsOpen(false)} tools={dbTools} onAddTool={handleAddTool} onUpdateTool={handleUpdateTool} onDeleteTool={handleDeleteTool} currentUser={user} />}
     </div>
   );
 };
