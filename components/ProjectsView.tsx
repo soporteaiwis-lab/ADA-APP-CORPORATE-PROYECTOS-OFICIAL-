@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Project, User, UserRole, ProjectLog, Repository, UsedID } from '../types';
 import { RepositoryManager } from './RepositoryManager'; 
+import { generateText } from '../services/geminiService'; // Import AI Service
 
 const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
   <i className={`fa-solid ${name} ${className}`}></i>
@@ -13,8 +14,8 @@ export const ProjectsView = ({
   onAddProject, 
   onDeleteProject,
   onUpdateProject,
-  usedIds, // NEW PROP: List of all historically used IDs
-  onRegisterId // NEW PROP: Function to register ID permanently
+  usedIds, 
+  onRegisterId 
 }: { 
   projects: Project[], 
   users: User[],
@@ -37,8 +38,12 @@ export const ProjectsView = ({
   const [filters, setFilters] = useState({ name: '', client: '', status: 'En Curso' });
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  // New Project State (includes manual fields for ID and Repos)
-  const [newProject, setNewProject] = useState<Partial<Project> & { manualId?: string, repoGithub?: string, repoDrive?: string }>({
+  // AI Analysis State
+  const [aiRecommendation, setAiRecommendation] = useState<string>('');
+  const [isAnalyzingTeam, setIsAnalyzingTeam] = useState(false);
+
+  // New Project State (includes manual fields for ID, Repos, and Tech Stack)
+  const [newProject, setNewProject] = useState<Partial<Project> & { manualId?: string, repoGithub?: string, repoDrive?: string, rawStack?: string }>({
     name: '', 
     client: '', 
     status: 'En Curso', 
@@ -47,10 +52,11 @@ export const ProjectsView = ({
     repositories: [], 
     startDate: new Date().toISOString().split('T')[0],
     deadline: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
-    teamIds: []
+    teamIds: [],
+    rawStack: '' // Comma separated string for input
   });
 
-  const [editProjectData, setEditProjectData] = useState<Partial<Project>>({});
+  const [editProjectData, setEditProjectData] = useState<Partial<Project> & { rawStack?: string }>({});
 
   // --- ESC KEY LISTENER (MASTER CLOSE) ---
   useEffect(() => {
@@ -98,8 +104,10 @@ export const ProjectsView = ({
         teamIds: [],
         manualId: nextId,
         repoGithub: 'https://github.com/soporteaiwis-lab/ADA-APP-CORPORATE-PROYECTOS-OFICIAL-',
-        repoDrive: ''
+        repoDrive: '',
+        rawStack: ''
       });
+      setAiRecommendation('');
       setShowCreateModal(true);
   };
 
@@ -132,6 +140,11 @@ export const ProjectsView = ({
         });
     }
 
+    // Parse Tech Stack
+    const technologies = newProject.rawStack 
+        ? newProject.rawStack.split(',').map(s => s.trim()).filter(s => s.length > 0)
+        : [];
+
     const project: Project = {
       id: newProject.manualId, // Use the manually editable ID
       name: newProject.name,
@@ -144,7 +157,7 @@ export const ProjectsView = ({
       startDate: newProject.startDate || new Date().toISOString(),
       leadId: newProject.leadId || currentUser.id,
       teamIds: newProject.teamIds || [],
-      technologies: [],
+      technologies: technologies,
       isOngoing: newProject.status === 'En Curso',
       report: newProject.status === 'En Curso',
       year: parseInt(newProject.startDate?.split('-')[0] || '2025'),
@@ -175,14 +188,26 @@ export const ProjectsView = ({
       }
   };
 
-  const handleOpenEdit = (p: Project) => { setSelectedProject(p); setEditProjectData({ ...p }); setShowEditModal(true); };
+  const handleOpenEdit = (p: Project) => { 
+      setSelectedProject(p); 
+      setEditProjectData({ 
+          ...p,
+          rawStack: p.technologies?.join(', ') || ''
+      }); 
+      setShowEditModal(true); 
+  };
   
   const handleUpdate = () => { 
       if (selectedProject && editProjectData) { 
           const updatedStatus = editProjectData.status || selectedProject.status;
+          const technologies = editProjectData.rawStack 
+                ? editProjectData.rawStack.split(',').map(s => s.trim()).filter(s => s.length > 0)
+                : selectedProject.technologies;
+
           const updatedData = {
               ...selectedProject,
               ...editProjectData,
+              technologies: technologies,
               isOngoing: updatedStatus === 'En Curso',
               report: updatedStatus === 'En Curso'
           };
@@ -208,6 +233,49 @@ export const ProjectsView = ({
       const updatedProject = { ...selectedProject, teamIds: newIds };
       setSelectedProject(updatedProject); 
       onUpdateProject(updatedProject);
+  };
+
+  // --- AI TEAM ANALYSIS ---
+  const handleAnalyzeTeam = async () => {
+      if (!newProject.name || !newProject.rawStack) {
+          alert("Ingresa el Nombre del Proyecto y el Stack Tecnológico para analizar.");
+          return;
+      }
+      setIsAnalyzingTeam(true);
+      
+      try {
+          // Prepare Data for AI
+          const userStats = users.map(u => {
+              // Calculate active projects for this user
+              const activeCount = projects.filter(p => p.status === 'En Curso' && (p.teamIds.includes(u.id) || p.leadId === u.id)).length;
+              return `- ${u.name} (${u.role}): Skills=[${u.skills.map(s => `${s.name} (${s.level}%)`).join(', ')}]. Active Projects: ${activeCount}.`;
+          }).join('\n');
+
+          const prompt = `
+          Context: You are an expert Project Manager AI. Suggest the best team for a new project.
+          
+          New Project Info:
+          - Name: ${newProject.name}
+          - Description: ${newProject.description || 'N/A'}
+          - Required Stack: ${newProject.rawStack}
+          - Dates: ${newProject.startDate} to ${newProject.deadline}
+          
+          Available Staff & Workload:
+          ${userStats}
+          
+          Instructions:
+          1. Recommend 1 Project Lead and 2-3 Developers/Analysts based on skill match and current workload (fewer active projects is better).
+          2. Explain briefly why for each person.
+          3. Keep it concise, in Spanish.
+          `;
+
+          const result = await generateText(prompt, "You are a helpful HR and Tech Lead assistant.");
+          setAiRecommendation(result);
+      } catch (e) {
+          setAiRecommendation("Error al conectar con la IA. Verifica tu API Key.");
+      } finally {
+          setIsAnalyzingTeam(false);
+      }
   };
 
   const filteredProjects = projects.filter(p => {
@@ -353,7 +421,7 @@ export const ProjectsView = ({
         ))}
       </div>
       
-      {/* Create/Edit Modal - OPTIMIZED */}
+      {/* Create/Edit Modal - OPTIMIZED WITH AI TEAM BUILDING */}
       {(showCreateModal || showEditModal) && (
         <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center p-4">
           <div className="w-full h-full md:h-auto md:max-h-[90vh] md:max-w-[700px] bg-white md:rounded-2xl flex flex-col shadow-2xl overflow-hidden animate-scale-up">
@@ -367,61 +435,55 @@ export const ProjectsView = ({
              <div className="p-6 overflow-y-auto flex-1 space-y-6">
                  {/* Basic Info */}
                  <div className="space-y-4">
-                     <h4 className="text-sm font-bold text-slate-400 uppercase">Información General</h4>
                      {!showEditModal && (
-                         <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                             <label className="block text-xs font-bold text-blue-700 uppercase mb-1">ID Correlativo (Autogenerado del Historial)</label>
-                             <input 
-                                className="w-full bg-white border border-blue-200 p-2 rounded text-blue-900 font-mono font-bold" 
-                                value={newProject.manualId} 
-                                onChange={e => setNewProject({...newProject, manualId: e.target.value})} 
-                             />
-                             <p className="text-[10px] text-blue-500 mt-1">Este ID se registrará permanentemente y no podrá ser reutilizado.</p>
+                         <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex justify-between items-center">
+                             <div>
+                                 <label className="block text-xs font-bold text-blue-700 uppercase mb-1">ID Correlativo</label>
+                                 <input 
+                                    className="bg-white border border-blue-200 p-1 rounded text-blue-900 font-mono font-bold w-32 text-center" 
+                                    value={newProject.manualId} 
+                                    onChange={e => setNewProject({...newProject, manualId: e.target.value})} 
+                                 />
+                             </div>
+                             <p className="text-[10px] text-blue-500 max-w-[200px] text-right">ID único registrado en historial.</p>
                          </div>
                      )}
-                     <input className="w-full border p-3 rounded-lg" placeholder="Nombre Proyecto" value={showEditModal ? editProjectData.name : newProject.name} onChange={e => showEditModal ? setEditProjectData({...editProjectData, name: e.target.value}) : setNewProject({...newProject, name: e.target.value})} />
-                     <input className="w-full border p-3 rounded-lg" placeholder="Cliente" value={showEditModal ? editProjectData.client : newProject.client} onChange={e => showEditModal ? setEditProjectData({...editProjectData, client: e.target.value}) : setNewProject({...newProject, client: e.target.value})} />
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <input className="w-full border p-3 rounded-lg" placeholder="Nombre Proyecto" value={showEditModal ? editProjectData.name : newProject.name} onChange={e => showEditModal ? setEditProjectData({...editProjectData, name: e.target.value}) : setNewProject({...newProject, name: e.target.value})} />
+                         <input className="w-full border p-3 rounded-lg" placeholder="Cliente" value={showEditModal ? editProjectData.client : newProject.client} onChange={e => showEditModal ? setEditProjectData({...editProjectData, client: e.target.value}) : setNewProject({...newProject, client: e.target.value})} />
+                     </div>
+                 </div>
+
+                 {/* NEW: Tech Stack Field */}
+                 <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Stack Tecnológico (Habilidades Requeridas)</label>
+                    <input 
+                        className="w-full border p-3 rounded-lg bg-slate-50" 
+                        placeholder="Ej: React, Node.js, AWS, Python (Separado por comas)" 
+                        value={showEditModal ? editProjectData.rawStack : newProject.rawStack} 
+                        onChange={e => showEditModal ? setEditProjectData({...editProjectData, rawStack: e.target.value}) : setNewProject({...newProject, rawStack: e.target.value})} 
+                    />
                  </div>
 
                  {/* New: Manual Repositories (Only Create) */}
                  {!showEditModal && (
-                     <div className="space-y-3">
-                         <h4 className="text-sm font-bold text-slate-400 uppercase">Repositorios Iniciales</h4>
-                         <div>
-                             <label className="block text-xs font-bold text-slate-500 mb-1">Enlace GitHub</label>
-                             <input className="w-full border p-3 rounded-lg text-sm font-mono" placeholder="https://github.com/..." value={newProject.repoGithub} onChange={e => setNewProject({...newProject, repoGithub: e.target.value})} />
+                     <div className="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                         <h4 className="text-xs font-bold text-slate-400 uppercase">Enlaces Iniciales</h4>
+                         <div className="flex gap-2">
+                             <input className="flex-1 border p-2 rounded-lg text-xs font-mono" placeholder="URL GitHub" value={newProject.repoGithub} onChange={e => setNewProject({...newProject, repoGithub: e.target.value})} />
+                             <input className="flex-1 border p-2 rounded-lg text-xs font-mono" placeholder="URL Drive" value={newProject.repoDrive} onChange={e => setNewProject({...newProject, repoDrive: e.target.value})} />
                          </div>
-                         <div>
-                             <label className="block text-xs font-bold text-slate-500 mb-1">Enlace Drive</label>
-                             <input className="w-full border p-3 rounded-lg text-sm font-mono" placeholder="https://drive.google.com/..." value={newProject.repoDrive} onChange={e => setNewProject({...newProject, repoDrive: e.target.value})} />
-                         </div>
-                     </div>
-                 )}
-
-                 {/* Status for Edit Mode */}
-                 {showEditModal && (
-                     <div>
-                        <label className="block text-xs font-bold text-slate-500 mb-1">Estado</label>
-                        <select 
-                            className="w-full border p-3 rounded-lg"
-                            value={editProjectData.status}
-                            onChange={e => setEditProjectData({...editProjectData, status: e.target.value as any})}
-                        >
-                            <option value="En Curso">En Curso</option>
-                            <option value="Finalizado">Finalizado</option>
-                            <option value="Planning">Planning</option>
-                        </select>
                      </div>
                  )}
 
                  {/* Dates */}
                  <div className="grid grid-cols-2 gap-4">
                      <div>
-                         <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Inicio</label>
+                         <label className="block text-xs font-bold text-slate-500 mb-1">Inicio</label>
                          <input type="date" className="w-full border p-3 rounded-lg" value={(showEditModal ? editProjectData.startDate : newProject.startDate) || ''} onChange={e => showEditModal ? setEditProjectData({...editProjectData, startDate: e.target.value}) : setNewProject({...newProject, startDate: e.target.value})} />
                      </div>
                      <div>
-                         <label className="block text-xs font-bold text-slate-500 mb-1">Fecha Término (Deadline)</label>
+                         <label className="block text-xs font-bold text-slate-500 mb-1">Término</label>
                          <input type="date" className="w-full border p-3 rounded-lg" value={(showEditModal ? editProjectData.deadline : newProject.deadline) || ''} onChange={e => showEditModal ? setEditProjectData({...editProjectData, deadline: e.target.value}) : setNewProject({...newProject, deadline: e.target.value})} />
                      </div>
                  </div>
@@ -429,20 +491,55 @@ export const ProjectsView = ({
                  {/* Description */}
                  <div>
                     <label className="block text-xs font-bold text-slate-500 mb-1">Descripción</label>
-                    <textarea className="w-full border p-3 rounded-lg h-24" placeholder="Detalles del proyecto..." value={showEditModal ? editProjectData.description : newProject.description} onChange={e => showEditModal ? setEditProjectData({...editProjectData, description: e.target.value}) : setNewProject({...newProject, description: e.target.value})} />
+                    <textarea className="w-full border p-3 rounded-lg h-20 text-sm" placeholder="Detalles del proyecto..." value={showEditModal ? editProjectData.description : newProject.description} onChange={e => showEditModal ? setEditProjectData({...editProjectData, description: e.target.value}) : setNewProject({...newProject, description: e.target.value})} />
                  </div>
 
+                 {/* TEAM ASSIGNMENT WITH AI */}
                  {!showEditModal && (
                      <div>
-                         <h4 className="text-sm font-bold text-slate-400 uppercase mb-2">Asignar Equipo Inicial</h4>
-                         <div className="border rounded-lg p-2 max-h-40 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2">
-                             {users.map(u => (
-                                 <label key={u.id} className={`flex items-center gap-2 p-2 rounded cursor-pointer border ${newProject.teamIds?.includes(u.id) ? 'bg-ada-50 border-ada-200' : 'border-transparent hover:bg-slate-50'}`}>
-                                     <input type="checkbox" checked={newProject.teamIds?.includes(u.id)} onChange={() => toggleNewProjectTeamMember(u.id)} className="rounded text-ada-600 focus:ring-ada-500" />
-                                     <img src={u.avatar} className="w-6 h-6 rounded-full" />
-                                     <span className="text-sm">{u.name}</span>
-                                 </label>
-                             ))}
+                         <div className="flex justify-between items-center mb-2">
+                             <h4 className="text-sm font-bold text-slate-500 uppercase">Asignar Equipo & Análisis</h4>
+                             <button 
+                                onClick={handleAnalyzeTeam}
+                                disabled={isAnalyzingTeam}
+                                className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2 transition-all shadow-sm"
+                             >
+                                 <Icon name="fa-magic" className={isAnalyzingTeam ? "animate-spin" : ""} />
+                                 {isAnalyzingTeam ? 'Analizando...' : 'Analizar con IA'}
+                             </button>
+                         </div>
+
+                         {/* AI Result Box */}
+                         {aiRecommendation && (
+                             <div className="bg-purple-50 p-4 rounded-xl border border-purple-200 mb-4 text-sm text-purple-900 animate-fade-in relative">
+                                 <button onClick={() => setAiRecommendation('')} className="absolute top-2 right-2 text-purple-400 hover:text-purple-700"><Icon name="fa-times"/></button>
+                                 <div className="font-bold mb-1 flex items-center gap-2"><Icon name="fa-robot" /> Recomendación de Equipo:</div>
+                                 <div className="whitespace-pre-wrap leading-relaxed text-xs md:text-sm">{aiRecommendation}</div>
+                             </div>
+                         )}
+
+                         <div className="border rounded-lg p-2 max-h-48 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-50">
+                             {users.map(u => {
+                                 const activeCount = projects.filter(p => p.status === 'En Curso' && (p.teamIds.includes(u.id) || p.leadId === u.id)).length;
+                                 const isSelected = newProject.teamIds?.includes(u.id);
+                                 
+                                 return (
+                                     <label key={u.id} className={`flex items-start gap-2 p-2 rounded cursor-pointer border transition-all ${isSelected ? 'bg-ada-100 border-ada-300 ring-1 ring-ada-500' : 'bg-white border-slate-200 hover:border-ada-300'}`}>
+                                         <input type="checkbox" checked={isSelected} onChange={() => toggleNewProjectTeamMember(u.id)} className="mt-1 rounded text-ada-600 focus:ring-ada-500" />
+                                         <div className="flex-1 min-w-0">
+                                             <div className="flex justify-between items-center">
+                                                 <span className="text-sm font-bold text-slate-800 truncate">{u.name}</span>
+                                                 {activeCount > 0 && <span className="text-[10px] bg-orange-100 text-orange-700 px-1 rounded font-bold">{activeCount} Activos</span>}
+                                             </div>
+                                             <p className="text-[10px] text-slate-500 truncate">{u.role}</p>
+                                             {/* Skills preview */}
+                                             <div className="flex flex-wrap gap-1 mt-1">
+                                                 {u.skills.slice(0, 3).map((s,i) => <span key={i} className="text-[9px] bg-slate-100 text-slate-500 px-1 rounded">{s.name}</span>)}
+                                             </div>
+                                         </div>
+                                     </label>
+                                 )
+                             })}
                          </div>
                      </div>
                  )}
