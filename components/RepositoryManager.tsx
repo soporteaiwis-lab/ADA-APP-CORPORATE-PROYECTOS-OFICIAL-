@@ -440,11 +440,22 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
           setProgress(10);
           
           const cleanUrl = repo.url.replace(/\/$/, "").replace(/\.git$/, "");
-          const match = cleanUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+          const parts = cleanUrl.split('github.com/')[1].split('/');
           
-          if (!match) throw new Error("URL inválida. Debe ser https://github.com/usuario/repositorio");
-          const owner = match[1];
-          const repoName = match[2];
+          if (parts.length < 2) throw new Error("URL inválida. Debe ser https://github.com/usuario/repositorio");
+          
+          const owner = parts[0];
+          const repoName = parts[1];
+          
+          // Subfolder support logic
+          let path = '';
+          const treeIndex = parts.indexOf('tree');
+          if (treeIndex !== -1 && parts.length > treeIndex + 2) {
+              // parts[treeIndex] is 'tree'
+              // parts[treeIndex+1] is branch (e.g. 'main')
+              // parts[treeIndex+2...] is the path
+              path = parts.slice(treeIndex + 2).join('/');
+          }
           
           setUploadStatusMsg('Codificando archivo...');
           const base64Content = await new Promise<string>((resolve, reject) => {
@@ -461,7 +472,9 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
           setProgress(30);
           setUploadStatusMsg(`Subiendo a ${owner}/${repoName}...`);
           
-          const apiUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/${file.name}`; 
+          // Construct API URL respecting subfolder
+          const filePath = path ? `${path}/${file.name}` : file.name;
+          const apiUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/${filePath}`; 
           
           const response = await fetch(apiUrl, {
               method: 'PUT',
@@ -488,7 +501,7 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
           
           const data = await response.json();
           setProgress(100);
-          completeUpload(file, repo, data.content?.html_url || repo.url);
+          completeUpload(file, repo, data.content?.html_url || repo.url, path ? `carpeta /${path}` : undefined);
       } catch (error: any) {
           setUploadState('error');
           setUploadStatusMsg(error.message);

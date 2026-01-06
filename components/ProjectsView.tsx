@@ -83,7 +83,15 @@ export const ProjectsView = ({
       report: newProject.status === 'En Curso',
       year: parseInt(newProject.startDate?.split('-')[0] || '2025'),
       logs: [],
-      repositories: [] 
+      // DEFAULT GITHUB REPOSITORY ASSIGNMENT
+      repositories: [
+          {
+              id: `r_def_${Date.now()}`,
+              type: 'github',
+              alias: 'Repositorio Oficial',
+              url: 'https://github.com/soporteaiwis-lab/ADA-APP-CORPORATE-PROYECTOS-OFICIAL-'
+          }
+      ] 
     };
     onAddProject(project);
     setShowCreateModal(false);

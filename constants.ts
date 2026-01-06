@@ -213,7 +213,7 @@ export const INITIAL_PROJECTS: Project[] = [
       { id: 'l2', date: '2025-02-12T14:30:00', text: 'Reunión con contabilidad para definir esquema de base de datos.', author: 'Andrea Martínez' }
     ],
     repositories: [
-        { id: 'r1', type: 'github', alias: 'Repositorio Fuente', url: 'https://github.com/soporteaiwis-lab/SIMPLEDATA-APP' }, 
+        { id: 'r1', type: 'github', alias: 'Repositorio Oficial', url: 'https://github.com/soporteaiwis-lab/ADA-APP-CORPORATE-PROYECTOS-OFICIAL-' }, 
         { id: 'r2', type: 'drive', alias: 'Documentación Oficial', url: 'https://drive.google.com/drive/folders/1S3Zavf6xdp9WaM8-gowBJImdkmSD_Niw' }
     ]
   },
@@ -235,7 +235,7 @@ export const INITIAL_PROJECTS: Project[] = [
     technologies: ['React Native', 'Node.js', 'Firebase'],
     logs: [],
     repositories: [
-         { id: 'r1', type: 'github', alias: 'App React Native', url: 'https://github.com/soporteaiwis-lab/SIMPLEDATA-APP' }
+         { id: 'r1', type: 'github', alias: 'Repositorio Oficial', url: 'https://github.com/soporteaiwis-lab/ADA-APP-CORPORATE-PROYECTOS-OFICIAL-' }
     ]
   },
   {
