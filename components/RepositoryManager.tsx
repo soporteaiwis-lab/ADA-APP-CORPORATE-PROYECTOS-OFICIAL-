@@ -41,6 +41,7 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
 
   const [githubToken, setGithubToken] = useState(getStoredGithubToken());
   const [showTokenInput, setShowTokenInput] = useState(false);
+  const [showConfigHint, setShowConfigHint] = useState(false); // New hint for general config
 
   // Drive Token State
   const [driveToken, setDriveToken] = useState<string>('');
@@ -93,10 +94,12 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
               return;
           }
           if (!APP_CONFIG.GOOGLE_CLIENT_ID) {
-            reject("Falta GOOGLE_CLIENT_ID en configuración.");
+            reject("Falta GOOGLE_CLIENT_ID en configuración. Usa el botón de engranaje.");
+            setShowConfigHint(true);
             return;
           }
           try {
+             // Wrap in try-catch for immediate errors
              const client = google.accounts.oauth2.initTokenClient({
                   client_id: APP_CONFIG.GOOGLE_CLIENT_ID,
                   scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
@@ -105,13 +108,22 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                           setDriveToken(tokenResponse.access_token);
                           resolve(tokenResponse.access_token);
                       } else {
-                          reject("No se obtuvo token de Google.");
+                          reject("Google no devolvió un token de acceso.");
                       }
                   },
+                  error_callback: (err: any) => {
+                      reject("Error en popup de Google (Puede ser 400 redirect_uri). Revisa la Configuración.");
+                      setShowConfigHint(true);
+                  }
               });
+              
+              // This triggers the popup. If origin is bad, it will fail in the popup, 
+              // but sometimes doesn't throw JS error here.
               client.requestAccessToken();
+              
           } catch (e) {
               reject(e);
+              setShowConfigHint(true);
           }
       });
   };
@@ -162,8 +174,9 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
           setPickerBreadcrumb([{ id: 'root', name: 'Mi Unidad' }]);
       } catch (e) {
           console.error(e);
-          alert("Error: " + e);
+          alert("Error de autenticación: " + e);
           setIsPickerOpen(false);
+          setShowConfigHint(true);
       } finally {
           setPickerLoading(false);
       }
@@ -215,8 +228,10 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
           setUploadCurrentFolder({ id: rootId, name: repo.alias });
           setUploadBreadcrumb([{ id: rootId, name: repo.alias }]);
       } catch (e: any) {
-          alert("Error abriendo repositorio: " + e.message);
+          // If auth fails, show alert and set config hint
+          alert("Error de Acceso: " + e);
           setIsUploadBrowserOpen(false);
+          setShowConfigHint(true);
       } finally {
           setUploadBrowserLoading(false);
       }
@@ -308,6 +323,7 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
           console.error(e);
           setCreationStatus('error');
           setCreationLog('Error: ' + e.message);
+          setShowConfigHint(true);
       }
   };
 
@@ -523,7 +539,17 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
                         <p className="text-white/60 text-sm truncate max-w-[200px]">{project.name}</p>
                     </div>
                 </div>
-                <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"><Icon name="fa-times" /></button>
+                <div className="flex items-center gap-2">
+                    {/* Direct Config Button */}
+                    <button 
+                        onClick={() => { alert("Por favor, ve al Dashboard > Engranaje para configurar el Client ID y el Origen Autorizado."); }} 
+                        className="bg-white/10 hover:bg-white/20 text-xs px-3 py-1.5 rounded flex items-center gap-2"
+                        title="Configuración de Accesos"
+                    >
+                        <Icon name="fa-cog" /> Accesos
+                    </button>
+                    <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center"><Icon name="fa-times" /></button>
+                </div>
             </div>
 
             {/* Tabs */}
@@ -545,6 +571,23 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 relative">
                 
+                {/* --- CONFIG HINT FOR DRIVE ERROR --- */}
+                {showConfigHint && (
+                     <div className="bg-red-50 p-4 rounded-xl border border-red-200 mb-4 animate-slide-up relative">
+                         <button onClick={()=>setShowConfigHint(false)} className="absolute top-2 right-2 text-red-400 hover:text-red-600"><Icon name="fa-times"/></button>
+                         <h4 className="font-bold text-red-700 text-sm mb-1"><Icon name="fa-exclamation-circle"/> Problemas de Conexión</h4>
+                         <p className="text-xs text-red-600 leading-relaxed mb-2">
+                             Google bloqueó el acceso (Error 400). Esto pasa cuando la URL de la web cambia.
+                         </p>
+                         <button 
+                            onClick={() => { onClose(); alert("Ve al Dashboard > Engranaje > Cuadro Rojo para copiar la URL exacta."); }}
+                            className="bg-red-600 text-white text-xs px-3 py-2 rounded font-bold shadow-sm hover:bg-red-700"
+                         >
+                            Ir a Solucionarlo
+                         </button>
+                     </div>
+                )}
+
                 {/* --- STRUCTURE PICKER OVERLAY --- */}
                 {isPickerOpen && (
                     <div className="absolute inset-0 bg-white z-50 flex flex-col p-4 animate-fade-in">

@@ -173,10 +173,30 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
                       <button onClick={() => setShowConfig(false)} className="hover:text-red-400"><Icon name="fa-times" /></button>
                   </div>
                   <div className="p-6 space-y-4 overflow-y-auto flex-1">
-                      <p className="text-sm text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                          <Icon name="fa-info-circle" /> Si tu archivo <code>.env</code> no se carga, ingresa tus llaves aquí. Se guardarán localmente en tu navegador.
-                      </p>
                       
+                      {/* DYNAMIC HELP BOX FOR REDIRECT_URI_MISMATCH */}
+                      <div className="bg-red-50 p-4 rounded-lg border-2 border-red-200 text-xs shadow-sm">
+                          <p className="font-bold text-red-700 text-sm mb-2"><Icon name="fa-exclamation-circle" /> Solución Error 400 (Google)</p>
+                          <p className="text-slate-700 mb-2 leading-relaxed">
+                            Si ves el error <strong>"redirect_uri_mismatch"</strong>, debes agregar la siguiente URL exacta en tu Google Cloud Console (APIs & Services {'>'} Credentials {'>'} Client ID {'>'} Authorized JavaScript origins):
+                          </p>
+                          <div className="flex gap-2">
+                            <code className="bg-white border-2 border-red-100 p-2 rounded flex-1 truncate font-mono text-red-600 font-bold select-all">
+                                {currentOrigin}
+                            </code>
+                            <button 
+                                onClick={() => {
+                                  navigator.clipboard.writeText(currentOrigin);
+                                  alert("URL copiada. Pégala en Google Cloud Console.");
+                                }}
+                                className="bg-red-600 hover:bg-red-700 px-3 py-2 rounded text-white font-bold"
+                                title="Copiar URL"
+                            >
+                                <Icon name="fa-copy" />
+                            </button>
+                          </div>
+                      </div>
+
                       <div>
                           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Gemini API Key (Google AI)</label>
                           <input 
@@ -206,7 +226,7 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
                         <p className="text-[10px] text-slate-400 mb-2">
                            Requerido para subir archivos directo a Drive. 
                            <a href="https://console.cloud.google.com/apis/credentials" target="_blank" className="text-ada-600 underline ml-1 font-bold">
-                               Créalo aquí (Google Cloud Console)
+                               Creado en Google Cloud Console
                            </a>.
                         </p>
                         <input 
@@ -216,24 +236,6 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
                               value={manualKeys.googleClientId}
                               onChange={e => setManualKeys({...manualKeys, googleClientId: e.target.value})}
                           />
-                          
-                          {/* DYNAMIC HELP BOX FOR REDIRECT_URI_MISMATCH */}
-                          <div className="mt-3 bg-red-50 p-3 rounded border border-red-100 text-xs">
-                             <p className="font-bold text-red-600 mb-1"><Icon name="fa-exclamation-triangle" /> ¿Error "redirect_uri_mismatch"?</p>
-                             <p className="text-slate-600 mb-2">Debes agregar <strong>exactamente</strong> esta URL en "Orígenes de JavaScript autorizados" en tu consola de Google:</p>
-                             <div className="flex gap-2">
-                                <code className="bg-white border border-slate-300 p-1.5 rounded flex-1 truncate font-mono select-all">
-                                    {currentOrigin}
-                                </code>
-                                <button 
-                                    onClick={() => navigator.clipboard.writeText(currentOrigin)}
-                                    className="bg-slate-200 hover:bg-slate-300 px-2 rounded text-slate-600 font-bold"
-                                    title="Copiar URL"
-                                >
-                                    <Icon name="fa-copy" />
-                                </button>
-                             </div>
-                          </div>
                       </div>
                   </div>
                   <div className="p-4 border-t shrink-0 bg-slate-50 flex justify-end gap-2">

@@ -2,12 +2,15 @@ import { User, UserRole, Project, Gem, Tool } from './types';
 
 // --- CONFIGURACIÓN DE ENTORNO (.ENV & LOCAL STORAGE) ---
 const getEnvVar = (key: string): string => {
+  // 1. Process Env
   if (typeof process !== 'undefined' && process.env && process.env[key]) {
     return process.env[key] as string;
   }
   if (typeof process !== 'undefined' && process.env && process.env[`REACT_APP_${key}`]) {
     return process.env[`REACT_APP_${key}`] as string;
   }
+  
+  // 2. Vite / Meta Env
   try {
     // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env) {
@@ -20,11 +23,14 @@ const getEnvVar = (key: string): string => {
     // Ignore errors
   }
 
-  // 4. FALBACK: Local Storage (Configuración Manual desde Dashboard)
-  // Updated prefix to 'ada_env_'
+  // 3. LOCAL STORAGE (Prioritize ADA keys, fallback to SIMPLE keys for migration)
   if (typeof window !== 'undefined') {
-      const manualKey = localStorage.getItem(`ada_env_${key}`);
-      if (manualKey) return manualKey;
+      const adaKey = localStorage.getItem(`ada_env_${key}`);
+      if (adaKey) return adaKey;
+
+      // Fallback for previous SimpleData users
+      const simpleKey = localStorage.getItem(`simple_env_${key}`);
+      if (simpleKey) return simpleKey;
   }
   
   return '';
