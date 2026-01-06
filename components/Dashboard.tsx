@@ -7,7 +7,14 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
 );
 
 export const Dashboard = ({ currentUser, projects }: { currentUser: User, projects: Project[] }) => {
-  const activeProjects = projects.filter(p => p.status === 'En Curso');
+  // LOGIC FIX: Filter projects where the user is either the Lead OR in the Team list.
+  // This ensures the dashboard updates immediately when they are removed from a team.
+  const myActiveProjects = projects.filter(p => 
+      p.status === 'En Curso' && 
+      (p.leadId === currentUser.id || p.teamIds?.includes(currentUser.id))
+  );
+  
+  const totalSystemProjects = projects.filter(p => p.status === 'En Curso');
   
   // Check System Status
   const isGeminiReady = !!APP_CONFIG.GEMINI_API_KEY && APP_CONFIG.GEMINI_API_KEY.length > 5;
@@ -139,24 +146,27 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-          <div className="flex justify-between items-start mb-4">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group">
+          <div className="absolute right-0 top-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
+              <Icon name="fa-layer-group" className="text-8xl text-blue-600" />
+          </div>
+          <div className="flex justify-between items-start mb-4 relative z-10">
             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-              <Icon name="fa-layer-group" className="text-xl" />
+              <Icon name="fa-briefcase" className="text-xl" />
             </div>
           </div>
-          <h3 className="text-3xl font-bold text-ada-900">{activeProjects.length}</h3>
-          <p className="text-slate-500 text-sm">Proyectos Activos</p>
+          <h3 className="text-3xl font-bold text-ada-900 relative z-10">{myActiveProjects.length}</h3>
+          <p className="text-slate-500 text-sm relative z-10 font-medium">Mis Proyectos Activos</p>
         </div>
         
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
-              <Icon name="fa-clock" className="text-xl" />
+              <Icon name="fa-building" className="text-xl" />
             </div>
           </div>
-          <h3 className="text-3xl font-bold text-ada-900">En Curso</h3>
-          <p className="text-slate-500 text-sm">Estado General</p>
+          <h3 className="text-3xl font-bold text-ada-900">{totalSystemProjects.length}</h3>
+          <p className="text-slate-500 text-sm font-medium">Total Empresa (En Curso)</p>
         </div>
 
         <div className="bg-gradient-to-br from-ada-600 to-ada-500 p-6 rounded-2xl shadow-lg text-white">

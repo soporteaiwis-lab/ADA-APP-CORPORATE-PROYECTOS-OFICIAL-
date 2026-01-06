@@ -54,6 +54,14 @@ export interface Project {
   repositories: Repository[]; // NEW: Flexible repo management
 }
 
+// NEW: Interface for tracking used correlatives forever
+export interface UsedID {
+  id: string; // e.g. "PROYECTO_005"
+  name: string; // Project Name associated
+  dateUsed: string; // When it was created
+  createdBy: string;
+}
+
 export interface Gem {
   id: string;
   name: string;

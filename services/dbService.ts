@@ -1,4 +1,4 @@
-import { User, Project, Gem, ProjectLog, Tool, Repository } from '../types';
+import { User, Project, Gem, ProjectLog, Tool, Repository, UsedID } from '../types';
 import { INITIAL_USERS, INITIAL_PROJECTS, INITIAL_GEMS, INITIAL_TOOLS } from '../constants';
 
 // Local Storage Keys - REBRANDED to ADA
@@ -6,6 +6,7 @@ const USERS_KEY = 'ada_users_v1';
 const PROJECTS_KEY = 'ada_projects_v1';
 const GEMS_KEY = 'ada_gems_v1';
 const TOOLS_KEY = 'ada_tools_v1';
+const USED_IDS_KEY = 'ada_used_ids_v1'; // NEW TABLE for Correlatives
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -14,6 +15,7 @@ class DBService {
   private projects: Project[] = [];
   private gems: Gem[] = [];
   private tools: Tool[] = [];
+  private usedIds: UsedID[] = [];
 
   constructor() {
     this.loadInitialData();
@@ -24,11 +26,13 @@ class DBService {
     const savedProjects = localStorage.getItem(PROJECTS_KEY);
     const savedGems = localStorage.getItem(GEMS_KEY);
     const savedTools = localStorage.getItem(TOOLS_KEY);
+    const savedIds = localStorage.getItem(USED_IDS_KEY);
 
     let localUsers: User[] = savedUsers ? JSON.parse(savedUsers) : [];
     let localProjects: Project[] = savedProjects ? JSON.parse(savedProjects) : [];
     let localGems: Gem[] = savedGems ? JSON.parse(savedGems) : [];
     let localTools: Tool[] = savedTools ? JSON.parse(savedTools) : [];
+    let localUsedIds: UsedID[] = savedIds ? JSON.parse(savedIds) : [];
 
     // --- MIGRATION LOGIC FOR OLD PROJECTS (Convert driveLink/githubLink to repositories) ---
     localProjects = localProjects.map((p: any) => {
@@ -78,6 +82,18 @@ class DBService {
     });
     this.projects = Array.from(mergedProjectsMap.values());
 
+    // 3.1 Initialize Used IDs from existing projects if empty
+    if (localUsedIds.length === 0) {
+        this.usedIds = this.projects.map(p => ({
+            id: p.id,
+            name: p.name,
+            dateUsed: p.startDate || new Date().toISOString(),
+            createdBy: 'System Init'
+        }));
+    } else {
+        this.usedIds = localUsedIds;
+    }
+
     // 4. Gems & Tools
     const mergedGemsMap = new Map<string, Gem>();
     localGems.forEach(g => mergedGemsMap.set(g.id, g));
@@ -97,6 +113,7 @@ class DBService {
     localStorage.setItem(PROJECTS_KEY, JSON.stringify(this.projects));
     localStorage.setItem(GEMS_KEY, JSON.stringify(this.gems));
     localStorage.setItem(TOOLS_KEY, JSON.stringify(this.tools));
+    localStorage.setItem(USED_IDS_KEY, JSON.stringify(this.usedIds));
   }
 
   async resetToDefaults(): Promise<void> {
@@ -105,6 +122,13 @@ class DBService {
       this.projects = [...INITIAL_PROJECTS];
       this.gems = [...INITIAL_GEMS];
       this.tools = [...INITIAL_TOOLS];
+      // Reset IDs based on defaults
+      this.usedIds = this.projects.map(p => ({
+            id: p.id,
+            name: p.name,
+            dateUsed: p.startDate || new Date().toISOString(),
+            createdBy: 'System Reset'
+      }));
       this.saveAll();
   }
 
@@ -119,6 +143,16 @@ class DBService {
   async updateProject(p: Project) { await delay(300); const idx = this.projects.findIndex(x => x.id === p.id); if(idx !== -1) { this.projects[idx] = p; this.saveAll(); } }
   async deleteProject(id: string) { await delay(400); this.projects = this.projects.filter(x => x.id !== id); this.saveAll(); }
   async addProjectLog(id: string, log: ProjectLog) { await delay(300); const p = this.projects.find(x => x.id === id); if(p) { if(!p.logs) p.logs=[]; p.logs.push(log); this.saveAll(); } }
+
+  // NEW: Used IDs Management
+  async getUsedIds() { await delay(200); return [...this.usedIds]; }
+  async registerUsedId(record: UsedID) { 
+      // Avoid duplicates
+      if (!this.usedIds.some(u => u.id === record.id)) {
+          this.usedIds.push(record); 
+          this.saveAll(); 
+      }
+  }
 
   async getGems() { await delay(200); return [...this.gems]; }
   async addGem(g: Gem) { await delay(300); this.gems.push(g); this.saveAll(); }

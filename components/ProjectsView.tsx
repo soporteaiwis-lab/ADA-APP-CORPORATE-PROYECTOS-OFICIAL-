@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Project, User, UserRole, ProjectLog, Repository } from '../types';
+import { Project, User, UserRole, ProjectLog, Repository, UsedID } from '../types';
 import { RepositoryManager } from './RepositoryManager'; 
 
 const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
@@ -12,14 +12,18 @@ export const ProjectsView = ({
   currentUser,
   onAddProject, 
   onDeleteProject,
-  onUpdateProject
+  onUpdateProject,
+  usedIds, // NEW PROP: List of all historically used IDs
+  onRegisterId // NEW PROP: Function to register ID permanently
 }: { 
   projects: Project[], 
   users: User[],
   currentUser: User,
   onAddProject: (p: Project) => void,
   onDeleteProject: (id: string) => void,
-  onUpdateProject: (p: Project) => void
+  onUpdateProject: (p: Project) => void,
+  usedIds: UsedID[],
+  onRegisterId: (r: UsedID) => void
 }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -65,9 +69,17 @@ export const ProjectsView = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Calculate Next ID logic
+  // UPDATED LOGIC: Calculate next ID based on HISTORICAL table, not current projects
   const getNextProjectId = () => {
-      const numbers = projects.map(p => parseInt(p.id.replace(/\D/g, '')) || 0);
+      // Parse numbers from the usedIds history table
+      const numbers = usedIds.map(u => parseInt(u.id.replace(/\D/g, '')) || 0);
+      
+      // Fallback: If history is empty, check active projects just in case
+      if (numbers.length === 0) {
+          const currentNumbers = projects.map(p => parseInt(p.id.replace(/\D/g, '')) || 0);
+          numbers.push(...currentNumbers);
+      }
+
       const max = Math.max(0, ...numbers);
       return `PROYECTO_${String(max + 1).padStart(3, '0')}`;
   };
@@ -94,6 +106,13 @@ export const ProjectsView = ({
   const handleCreate = () => {
     if (!newProject.name || !newProject.client || !newProject.manualId) return;
     
+    // Validate ID uniqueness (Soft check)
+    if (usedIds.some(u => u.id === newProject.manualId)) {
+        if (!confirm(`El ID ${newProject.manualId} ya existe en el historial. ¿Seguro que deseas usarlo? Se recomienda usar el correlativo siguiente.`)) {
+            return;
+        }
+    }
+
     // Construct Repositories based on manual input
     const initialRepos: Repository[] = [];
     if (newProject.repoGithub) {
@@ -132,7 +151,18 @@ export const ProjectsView = ({
       logs: [],
       repositories: initialRepos
     };
+    
+    // 1. Create Project
     onAddProject(project);
+    
+    // 2. Register ID Permanently
+    onRegisterId({
+        id: project.id,
+        name: project.name,
+        dateUsed: new Date().toISOString(),
+        createdBy: currentUser.name
+    });
+
     setShowCreateModal(false);
   };
 
@@ -340,12 +370,13 @@ export const ProjectsView = ({
                      <h4 className="text-sm font-bold text-slate-400 uppercase">Información General</h4>
                      {!showEditModal && (
                          <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                             <label className="block text-xs font-bold text-blue-700 uppercase mb-1">ID Correlativo (Autogenerado)</label>
+                             <label className="block text-xs font-bold text-blue-700 uppercase mb-1">ID Correlativo (Autogenerado del Historial)</label>
                              <input 
                                 className="w-full bg-white border border-blue-200 p-2 rounded text-blue-900 font-mono font-bold" 
                                 value={newProject.manualId} 
                                 onChange={e => setNewProject({...newProject, manualId: e.target.value})} 
                              />
+                             <p className="text-[10px] text-blue-500 mt-1">Este ID se registrará permanentemente y no podrá ser reutilizado.</p>
                          </div>
                      )}
                      <input className="w-full border p-3 rounded-lg" placeholder="Nombre Proyecto" value={showEditModal ? editProjectData.name : newProject.name} onChange={e => showEditModal ? setEditProjectData({...editProjectData, name: e.target.value}) : setNewProject({...newProject, name: e.target.value})} />

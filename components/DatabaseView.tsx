@@ -9,6 +9,7 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
 const DB_KEYS = {
     'USERS': 'ada_users_v1',
     'PROJECTS': 'ada_projects_v1',
+    'USED_IDS': 'ada_used_ids_v1', // NEW EXPOSED TABLE
     'GEMS': 'ada_gems_v1',
     'TOOLS': 'ada_tools_v1',
     'CONFIG_API': 'ada_env_API_KEY',
