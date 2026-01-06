@@ -31,9 +31,10 @@ export const AdminUsersView = ({
   const [passwordVisible, setPasswordVisible] = useState(false);
 
   // HELPER: Calculate active projects dynamically to fix sync issues
+  // UPDATED: Count everything NOT 'Finalizado' as Active
   const getUserActiveProjects = (userId: string) => {
       return projects.filter(p => 
-          p.status === 'En Curso' && 
+          p.status !== 'Finalizado' && 
           (p.teamIds.includes(userId) || p.leadId === userId)
       );
   };
@@ -89,11 +90,11 @@ export const AdminUsersView = ({
   const toggleProjectStatus = (projectId: string) => {
       const project = projects.find(p => p.id === projectId);
       if (project) {
-          const newStatus = project.status === 'En Curso' ? 'Finalizado' : 'En Curso';
+          const newStatus = project.status !== 'Finalizado' ? 'Finalizado' : 'En Desarrollo';
           onUpdateProject({ 
               ...project, 
               status: newStatus,
-              isOngoing: newStatus === 'En Curso'
+              isOngoing: newStatus !== 'Finalizado'
           });
       }
   };
@@ -140,7 +141,7 @@ export const AdminUsersView = ({
               {users.map(user => {
                   // Calculate strictly from projects list to ensure sync
                   const assignedProjects = getAllUserProjects(user.id);
-                  const activeCount = assignedProjects.filter(p => p.status === 'En Curso').length;
+                  const activeCount = assignedProjects.filter(p => p.status !== 'Finalizado').length;
                   
                   return (
                     <tr key={user.id} className="hover:bg-slate-50">
@@ -177,7 +178,7 @@ export const AdminUsersView = ({
                                       <div className="max-h-48 overflow-y-auto">
                                           {assignedProjects.length === 0 && <div className="p-3 text-xs text-slate-400 text-center">Sin asignaciones</div>}
                                           {assignedProjects.map(proj => {
-                                              const isActive = proj.status === 'En Curso';
+                                              const isActive = proj.status !== 'Finalizado';
                                               return (
                                                   <button 
                                                     key={proj.id}
@@ -188,8 +189,8 @@ export const AdminUsersView = ({
                                                           <div className="font-bold text-slate-700 truncate">{proj.name}</div>
                                                           <div className="text-[10px] text-slate-400 truncate">{proj.client}</div>
                                                       </div>
-                                                      <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-400'}`}>
-                                                          {isActive ? 'ON' : 'OFF'}
+                                                      <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
+                                                          {isActive ? proj.status : 'OFF'}
                                                       </div>
                                                   </button>
                                               );

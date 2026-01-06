@@ -34,6 +34,9 @@ export interface Repository {
   type: 'github' | 'drive' | 'other';
 }
 
+// UPDATED STATUSES FOR SDLC
+export type ProjectStatus = 'Planificación' | 'En Desarrollo' | 'En QA' | 'Despliegue' | 'Finalizado' | 'En Curso'; // 'En Curso' kept for legacy data compatibility
+
 export interface Project {
   id: string;
   name: string;
@@ -41,7 +44,7 @@ export interface Project {
   encargadoCliente?: string;
   leadId: string;
   teamIds: string[];
-  status: 'En Curso' | 'Finalizado' | 'Planning';
+  status: ProjectStatus;
   isOngoing: boolean;
   report: boolean;
   deadline: string;

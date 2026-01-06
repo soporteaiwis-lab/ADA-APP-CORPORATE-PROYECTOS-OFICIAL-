@@ -8,13 +8,13 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
 
 export const Dashboard = ({ currentUser, projects }: { currentUser: User, projects: Project[] }) => {
   // LOGIC FIX: Filter projects where the user is either the Lead OR in the Team list.
-  // This ensures the dashboard updates immediately when they are removed from a team.
+  // Updated for new Statuses: Count anything NOT 'Finalizado' as Active.
   const myActiveProjects = projects.filter(p => 
-      p.status === 'En Curso' && 
+      p.status !== 'Finalizado' && 
       (p.leadId === currentUser.id || p.teamIds?.includes(currentUser.id))
   );
   
-  const totalSystemProjects = projects.filter(p => p.status === 'En Curso');
+  const totalSystemProjects = projects.filter(p => p.status !== 'Finalizado');
   
   // Check System Status
   const isGeminiReady = !!APP_CONFIG.GEMINI_API_KEY && APP_CONFIG.GEMINI_API_KEY.length > 5;

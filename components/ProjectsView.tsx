@@ -1,11 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Project, User, UserRole, ProjectLog, Repository, UsedID } from '../types';
+import { Project, User, UserRole, ProjectLog, Repository, UsedID, ProjectStatus } from '../types';
 import { RepositoryManager } from './RepositoryManager'; 
 import { generateText } from '../services/geminiService'; // Import AI Service
 
 const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
   <i className={`fa-solid ${name} ${className}`}></i>
 );
+
+// STATUS CONFIGURATION
+const PROJECT_STATUSES: ProjectStatus[] = ['Planificación', 'En Desarrollo', 'En QA', 'Despliegue', 'Finalizado'];
+
+const getStatusColor = (s: ProjectStatus) => {
+    switch(s) {
+        case 'Planificación': return 'bg-purple-100 text-purple-700';
+        case 'En Desarrollo': return 'bg-blue-100 text-blue-700';
+        case 'En QA': return 'bg-orange-100 text-orange-700';
+        case 'Despliegue': return 'bg-teal-100 text-teal-700';
+        case 'Finalizado': return 'bg-slate-200 text-slate-500';
+        case 'En Curso': return 'bg-blue-50 text-blue-600'; // Legacy fallback
+        default: return 'bg-slate-100 text-slate-500';
+    }
+};
 
 export const ProjectsView = ({ 
   projects, 
@@ -35,28 +50,32 @@ export const ProjectsView = ({
   const [repoManagerConfig, setRepoManagerConfig] = useState<{ project: Project, type: 'github' | 'drive' } | null>(null);
 
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [filters, setFilters] = useState({ name: '', client: '', status: 'En Curso' });
+  const [filters, setFilters] = useState({ name: '', client: '', status: 'Todos' });
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   // AI Analysis State
   const [aiRecommendation, setAiRecommendation] = useState<string>('');
   const [isAnalyzingTeam, setIsAnalyzingTeam] = useState(false);
 
-  // New Project State (includes manual fields for ID, Repos, and Tech Stack)
-  const [newProject, setNewProject] = useState<Partial<Project> & { manualId?: string, repoGithub?: string, repoDrive?: string, rawStack?: string }>({
+  // Collect all unique skills from users for the Combo Box
+  const availableSkills = Array.from(new Set(users.flatMap(u => u.skills.map(s => s.name)))).sort();
+
+  // New Project State
+  const [newProject, setNewProject] = useState<Partial<Project> & { manualId?: string, repoGithub?: string, repoDrive?: string }>({
     name: '', 
     client: '', 
-    status: 'En Curso', 
+    status: 'Planificación', 
     progress: 0, 
     description: '', 
     repositories: [], 
     startDate: new Date().toISOString().split('T')[0],
     deadline: new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0],
     teamIds: [],
-    rawStack: '' // Comma separated string for input
+    technologies: [] // Array of strings
   });
 
-  const [editProjectData, setEditProjectData] = useState<Partial<Project> & { rawStack?: string }>({});
+  const [editProjectData, setEditProjectData] = useState<Partial<Project>>({});
+  const [techInput, setTechInput] = useState(''); // Temporary input for custom tech
 
   // --- ESC KEY LISTENER (MASTER CLOSE) ---
   useEffect(() => {
@@ -75,17 +94,12 @@ export const ProjectsView = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // UPDATED LOGIC: Calculate next ID based on HISTORICAL table, not current projects
   const getNextProjectId = () => {
-      // Parse numbers from the usedIds history table
       const numbers = usedIds.map(u => parseInt(u.id.replace(/\D/g, '')) || 0);
-      
-      // Fallback: If history is empty, check active projects just in case
       if (numbers.length === 0) {
           const currentNumbers = projects.map(p => parseInt(p.id.replace(/\D/g, '')) || 0);
           numbers.push(...currentNumbers);
       }
-
       const max = Math.max(0, ...numbers);
       return `PROYECTO_${String(max + 1).padStart(3, '0')}`;
   };
@@ -95,7 +109,7 @@ export const ProjectsView = ({
       setNewProject({
         name: '', 
         client: '', 
-        status: 'En Curso', 
+        status: 'Planificación', 
         progress: 0, 
         description: '', 
         repositories: [], 
@@ -105,8 +119,9 @@ export const ProjectsView = ({
         manualId: nextId,
         repoGithub: 'https://github.com/soporteaiwis-lab/ADA-APP-CORPORATE-PROYECTOS-OFICIAL-',
         repoDrive: '',
-        rawStack: ''
+        technologies: []
       });
+      setTechInput('');
       setAiRecommendation('');
       setShowCreateModal(true);
   };
@@ -114,114 +129,90 @@ export const ProjectsView = ({
   const handleCreate = () => {
     if (!newProject.name || !newProject.client || !newProject.manualId) return;
     
-    // Validate ID uniqueness (Soft check)
     if (usedIds.some(u => u.id === newProject.manualId)) {
-        if (!confirm(`El ID ${newProject.manualId} ya existe en el historial. ¿Seguro que deseas usarlo? Se recomienda usar el correlativo siguiente.`)) {
-            return;
-        }
+        if (!confirm(`El ID ${newProject.manualId} ya existe en el historial. ¿Usarlo igual?`)) return;
     }
 
-    // Construct Repositories based on manual input
     const initialRepos: Repository[] = [];
-    if (newProject.repoGithub) {
-        initialRepos.push({
-            id: `r_gh_${Date.now()}`,
-            type: 'github',
-            alias: 'Repositorio Oficial',
-            url: newProject.repoGithub
-        });
-    }
-    if (newProject.repoDrive) {
-        initialRepos.push({
-            id: `r_dr_${Date.now()}`,
-            type: 'drive',
-            alias: 'Carpeta Drive Oficial',
-            url: newProject.repoDrive
-        });
-    }
-
-    // Parse Tech Stack
-    const technologies = newProject.rawStack 
-        ? newProject.rawStack.split(',').map(s => s.trim()).filter(s => s.length > 0)
-        : [];
+    if (newProject.repoGithub) initialRepos.push({ id: `r_gh_${Date.now()}`, type: 'github', alias: 'Repositorio Oficial', url: newProject.repoGithub });
+    if (newProject.repoDrive) initialRepos.push({ id: `r_dr_${Date.now()}`, type: 'drive', alias: 'Carpeta Drive Oficial', url: newProject.repoDrive });
 
     const project: Project = {
-      id: newProject.manualId, // Use the manually editable ID
+      id: newProject.manualId, 
       name: newProject.name,
       client: newProject.client,
       encargadoCliente: newProject.encargadoCliente || 'Sin Asignar',
-      status: newProject.status as any,
+      status: newProject.status as ProjectStatus,
       description: newProject.description || '',
       progress: newProject.progress || 0,
       deadline: newProject.deadline || new Date().toISOString(),
       startDate: newProject.startDate || new Date().toISOString(),
       leadId: newProject.leadId || currentUser.id,
       teamIds: newProject.teamIds || [],
-      technologies: technologies,
-      isOngoing: newProject.status === 'En Curso',
-      report: newProject.status === 'En Curso',
+      technologies: newProject.technologies || [],
+      isOngoing: newProject.status !== 'Finalizado',
+      report: newProject.status !== 'Finalizado',
       year: parseInt(newProject.startDate?.split('-')[0] || '2025'),
       logs: [],
       repositories: initialRepos
     };
     
-    // 1. Create Project
     onAddProject(project);
-    
-    // 2. Register ID Permanently
-    onRegisterId({
-        id: project.id,
-        name: project.name,
-        dateUsed: new Date().toISOString(),
-        createdBy: currentUser.name
-    });
-
+    onRegisterId({ id: project.id, name: project.name, dateUsed: new Date().toISOString(), createdBy: currentUser.name });
     setShowCreateModal(false);
   };
 
   const toggleNewProjectTeamMember = (userId: string) => {
       const current = newProject.teamIds || [];
-      if (current.includes(userId)) {
-          setNewProject({ ...newProject, teamIds: current.filter(id => id !== userId) });
-      } else {
-          setNewProject({ ...newProject, teamIds: [...current, userId] });
-      }
+      setNewProject({ ...newProject, teamIds: current.includes(userId) ? current.filter(id => id !== userId) : [...current, userId] });
   };
 
   const handleOpenEdit = (p: Project) => { 
       setSelectedProject(p); 
-      setEditProjectData({ 
-          ...p,
-          rawStack: p.technologies?.join(', ') || ''
-      }); 
+      setEditProjectData({ ...p }); 
+      setTechInput('');
       setShowEditModal(true); 
   };
   
   const handleUpdate = () => { 
       if (selectedProject && editProjectData) { 
-          const updatedStatus = editProjectData.status || selectedProject.status;
-          const technologies = editProjectData.rawStack 
-                ? editProjectData.rawStack.split(',').map(s => s.trim()).filter(s => s.length > 0)
-                : selectedProject.technologies;
-
           const updatedData = {
               ...selectedProject,
               ...editProjectData,
-              technologies: technologies,
-              isOngoing: updatedStatus === 'En Curso',
-              report: updatedStatus === 'En Curso'
+              isOngoing: editProjectData.status !== 'Finalizado',
+              report: editProjectData.status !== 'Finalizado'
           };
-          onUpdateProject(updatedData); 
+          onUpdateProject(updatedData as Project); 
           setShowEditModal(false); 
       } 
   };
   
+  // --- TECH STACK HANDLERS ---
+  const addTech = (tech: string, isEdit: boolean) => {
+      if (!tech) return;
+      if (isEdit) {
+          const current = editProjectData.technologies || [];
+          if (!current.includes(tech)) setEditProjectData({ ...editProjectData, technologies: [...current, tech] });
+      } else {
+          const current = newProject.technologies || [];
+          if (!current.includes(tech)) setNewProject({ ...newProject, technologies: [...current, tech] });
+      }
+      setTechInput('');
+  };
+
+  const removeTech = (tech: string, isEdit: boolean) => {
+      if (isEdit) {
+          setEditProjectData({ ...editProjectData, technologies: editProjectData.technologies?.filter(t => t !== tech) });
+      } else {
+          setNewProject({ ...newProject, technologies: newProject.technologies?.filter(t => t !== tech) });
+      }
+  };
+
   const openRepoManager = (project: Project, type: 'github' | 'drive') => {
       setRepoManagerConfig({ project, type });
       setActiveMenuId(null);
   };
   
-  const handleMenuClick = (id: string) => { setActiveMenuId(activeMenuId === id ? null : id); };
   const handleOpenLog = (p: Project) => { setSelectedProject(p); setShowLogModal(true); };
   const handleOpenTeam = (p: Project) => { setSelectedProject(p); setShowTeamModal(true); };
   const handleOpenReq = (p: Project) => { setSelectedProject(p); setShowReqModal(true); };
@@ -237,8 +228,10 @@ export const ProjectsView = ({
 
   // --- AI TEAM ANALYSIS ---
   const handleAnalyzeTeam = async () => {
-      if (!newProject.name || !newProject.rawStack) {
-          alert("Ingresa el Nombre del Proyecto y el Stack Tecnológico para analizar.");
+      const techList = newProject.technologies?.join(', ');
+      
+      if (!newProject.name || !techList) {
+          alert("Ingresa el Nombre del Proyecto y selecciona al menos una tecnología del Stack.");
           return;
       }
       setIsAnalyzingTeam(true);
@@ -246,27 +239,27 @@ export const ProjectsView = ({
       try {
           // Prepare Data for AI
           const userStats = users.map(u => {
-              // Calculate active projects for this user
-              const activeCount = projects.filter(p => p.status === 'En Curso' && (p.teamIds.includes(u.id) || p.leadId === u.id)).length;
+              const activeCount = projects.filter(p => p.status !== 'Finalizado' && (p.teamIds.includes(u.id) || p.leadId === u.id)).length;
               return `- ${u.name} (${u.role}): Skills=[${u.skills.map(s => `${s.name} (${s.level}%)`).join(', ')}]. Active Projects: ${activeCount}.`;
           }).join('\n');
 
           const prompt = `
-          Context: You are an expert Project Manager AI. Suggest the best team for a new project.
+          Context: You are an expert Technical Recruiter AI.
+          Task: Suggest the best team for a new software project.
           
           New Project Info:
           - Name: ${newProject.name}
           - Description: ${newProject.description || 'N/A'}
-          - Required Stack: ${newProject.rawStack}
+          - Required Tech Stack: ${techList}
           - Dates: ${newProject.startDate} to ${newProject.deadline}
           
           Available Staff & Workload:
           ${userStats}
           
           Instructions:
-          1. Recommend 1 Project Lead and 2-3 Developers/Analysts based on skill match and current workload (fewer active projects is better).
-          2. Explain briefly why for each person.
-          3. Keep it concise, in Spanish.
+          1. Recommend 1 Project Lead and 2-3 Developers/Analysts who match the Stack technologies.
+          2. Prioritize people with fewer active projects if skills match.
+          3. Explain strictly in Spanish.
           `;
 
           const result = await generateText(prompt, "You are a helpful HR and Tech Lead assistant.");
@@ -299,7 +292,7 @@ export const ProjectsView = ({
 
        <div className="flex flex-col gap-4">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-            <h2 className="text-2xl font-bold text-ada-900">Gestión de Proyectos</h2>
+            <h2 className="text-2xl font-bold text-ada-900">Gestión de Proyectos (SDLC)</h2>
             <button onClick={openCreateModal} className="w-full lg:w-auto bg-ada-600 hover:bg-ada-700 text-white px-4 py-3 lg:py-2 rounded-lg text-sm font-medium transition-colors shadow-md flex items-center justify-center">
             <Icon name="fa-plus" className="mr-2" /> Nuevo Proyecto
             </button>
@@ -328,21 +321,20 @@ export const ProjectsView = ({
                     value={filters.status}
                     onChange={e => setFilters({...filters, status: e.target.value})}
                  >
-                     <option value="En Curso">En Curso</option>
-                     <option value="Finalizado">Finalizados</option>
                      <option value="Todos">Todos</option>
+                     {PROJECT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
                  </select>
              </div>
         </div>
       </div>
 
-      {/* --- DESKTOP TABLE VIEW (Hidden on Mobile) --- */}
+      {/* --- DESKTOP TABLE VIEW --- */}
       <div className="hidden lg:block bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm table-fixed min-w-[800px]">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="p-3 w-1/4">Proyecto</th> <th className="p-3 w-1/5">Cliente</th> <th className="p-3 text-center w-24">Equipo</th> <th className="p-3 w-32">Fechas</th> <th className="p-3 text-center w-24">Estado</th> <th className="p-3 text-center w-28">Repositorios</th> <th className="p-3 text-center w-32">Acciones</th>
+                <th className="p-3 w-1/4">Proyecto</th> <th className="p-3 w-1/5">Cliente</th> <th className="p-3 text-center w-24">Equipo</th> <th className="p-3 w-32">Fechas</th> <th className="p-3 text-center w-32">Estado</th> <th className="p-3 text-center w-28">Repositorios</th> <th className="p-3 text-center w-32">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -356,16 +348,14 @@ export const ProjectsView = ({
                     <td className="p-3"><div className="truncate">{project.client}</div></td>
                     <td className="p-3 text-center"><button onClick={()=>handleOpenTeam(project)} className="w-8 h-8 rounded-full border hover:bg-slate-100"><Icon name="fa-users-cog"/></button></td>
                     <td className="p-3 text-xs"><div>In: {new Date(project.startDate || '').toLocaleDateString()}</div><div>Fin: {new Date(project.deadline).toLocaleDateString()}</div></td>
-                    <td className="p-3 text-center"><span className={`px-2 py-1 rounded-full text-xs font-bold ${project.status === 'En Curso'?'bg-green-100 text-green-700':'bg-slate-200 text-slate-500'}`}>{project.status==='En Curso'?'Activo':'Fin'}</span></td>
+                    <td className="p-3 text-center"><span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusColor(project.status)}`}>{project.status}</span></td>
                     <td className="p-3 text-center">
                         <div className="flex justify-center gap-1">
                             <button onClick={()=>openRepoManager(project,'drive')} className="p-1 relative group">
                                 <Icon name="fab fa-google-drive" className={`text-lg ${project.repositories?.some(r=>r.type==='drive') ? 'text-green-600' : 'text-slate-300'}`}/>
-                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 bg-black text-white text-[10px] p-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">Drive</span>
                             </button>
                             <button onClick={()=>openRepoManager(project,'github')} className="p-1 relative group">
                                 <Icon name="fab fa-github" className={`text-lg ${project.repositories?.some(r=>r.type==='github') ? 'text-black' : 'text-slate-300'}`}/>
-                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 bg-black text-white text-[10px] p-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">GitHub</span>
                             </button>
                         </div>
                     </td>
@@ -377,7 +367,7 @@ export const ProjectsView = ({
         </div>
       </div>
 
-      {/* --- MOBILE CARD VIEW (Full Features) --- */}
+      {/* --- MOBILE CARD VIEW --- */}
       <div className="lg:hidden space-y-4">
         {filteredProjects.map(project => (
            <div key={project.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-3">
@@ -385,10 +375,9 @@ export const ProjectsView = ({
                  <div className="flex-1 mr-2">
                     <h3 className="font-bold text-slate-900 text-lg leading-tight mb-1">{project.name}</h3>
                     <p className="text-xs text-slate-400 font-mono mb-1">{project.id}</p>
-                    <p className="text-sm text-slate-500 font-medium">{project.client}</p>
                  </div>
-                 <span className={`shrink-0 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${project.status === 'En Curso' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-500'}`}>
-                    {project.status === 'En Curso' ? 'Activo' : 'Fin'}
+                 <span className={`shrink-0 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${getStatusColor(project.status)}`}>
+                    {project.status}
                  </span>
               </div>
               
@@ -399,11 +388,6 @@ export const ProjectsView = ({
                   <button onClick={() => handleOpenReq(project)} className="flex-1 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-2 hover:bg-slate-100">
                       <Icon name="fa-file-alt" /> Resumen
                   </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 bg-slate-50 p-3 rounded-lg">
-                 <div><span className="block text-slate-400 font-bold uppercase">Inicio</span>{new Date(project.startDate || '').toLocaleDateString()}</div>
-                 <div><span className="block text-slate-400 font-bold uppercase">Fin</span>{new Date(project.deadline).toLocaleDateString()}</div>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
@@ -421,17 +405,17 @@ export const ProjectsView = ({
         ))}
       </div>
       
-      {/* Create/Edit Modal - OPTIMIZED WITH AI TEAM BUILDING */}
+      {/* Create/Edit Modal - OPTIMIZED */}
       {(showCreateModal || showEditModal) && (
         <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center p-4">
           <div className="w-full h-full md:h-auto md:max-h-[90vh] md:max-w-[700px] bg-white md:rounded-2xl flex flex-col shadow-2xl overflow-hidden animate-scale-up">
-             {/* HEADER - FIXED */}
+             {/* HEADER */}
              <div className="p-4 border-b flex justify-between items-center bg-slate-50 md:bg-white md:rounded-t-2xl shrink-0">
                 <h3 className="text-lg font-bold">{showEditModal ? 'Editar Proyecto' : 'Nuevo Proyecto'}</h3>
                 <button onClick={() => {setShowCreateModal(false); setShowEditModal(false);}} className="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full hover:bg-slate-300 transition-colors"><Icon name="fa-times"/></button>
              </div>
              
-             {/* BODY - SCROLLABLE */}
+             {/* BODY */}
              <div className="p-6 overflow-y-auto flex-1 space-y-6">
                  {/* Basic Info */}
                  <div className="space-y-4">
@@ -454,27 +438,54 @@ export const ProjectsView = ({
                      </div>
                  </div>
 
-                 {/* NEW: Tech Stack Field */}
-                 <div>
-                    <label className="block text-xs font-bold text-slate-500 mb-1">Stack Tecnológico (Habilidades Requeridas)</label>
-                    <input 
-                        className="w-full border p-3 rounded-lg bg-slate-50" 
-                        placeholder="Ej: React, Node.js, AWS, Python (Separado por comas)" 
-                        value={showEditModal ? editProjectData.rawStack : newProject.rawStack} 
-                        onChange={e => showEditModal ? setEditProjectData({...editProjectData, rawStack: e.target.value}) : setNewProject({...newProject, rawStack: e.target.value})} 
-                    />
-                 </div>
-
-                 {/* New: Manual Repositories (Only Create) */}
-                 {!showEditModal && (
-                     <div className="space-y-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                         <h4 className="text-xs font-bold text-slate-400 uppercase">Enlaces Iniciales</h4>
-                         <div className="flex gap-2">
-                             <input className="flex-1 border p-2 rounded-lg text-xs font-mono" placeholder="URL GitHub" value={newProject.repoGithub} onChange={e => setNewProject({...newProject, repoGithub: e.target.value})} />
-                             <input className="flex-1 border p-2 rounded-lg text-xs font-mono" placeholder="URL Drive" value={newProject.repoDrive} onChange={e => setNewProject({...newProject, repoDrive: e.target.value})} />
-                         </div>
-                     </div>
+                 {/* SDLC Status Selection */}
+                 {showEditModal && (
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1">Estado de Desarrollo</label>
+                        <select 
+                            className="w-full border p-3 rounded-lg bg-slate-50"
+                            value={editProjectData.status}
+                            onChange={e => setEditProjectData({...editProjectData, status: e.target.value as ProjectStatus})}
+                        >
+                            {PROJECT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    </div>
                  )}
+
+                 {/* SMART TECH STACK COMBO BOX */}
+                 <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-1">Stack Tecnológico (Seleccionar o Escribir)</label>
+                    <div className="flex gap-2 mb-2">
+                        <select 
+                             className="flex-1 border p-2 rounded-lg bg-slate-50 text-sm"
+                             value={techInput}
+                             onChange={e => {
+                                 const val = e.target.value;
+                                 if (val && val !== 'custom') addTech(val, showEditModal);
+                             }}
+                        >
+                            <option value="">-- Seleccionar de la Base de Datos --</option>
+                            {availableSkills.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <input 
+                            className="flex-1 border p-2 rounded-lg text-sm"
+                            placeholder="O escribir nueva..."
+                            onKeyPress={e => { if(e.key==='Enter') { addTech(e.currentTarget.value, showEditModal); e.currentTarget.value=''; } }}
+                        />
+                    </div>
+                    {/* Tags Display */}
+                    <div className="flex flex-wrap gap-2">
+                        {(showEditModal ? editProjectData.technologies : newProject.technologies)?.map(t => (
+                            <span key={t} className="bg-slate-800 text-white px-2 py-1 rounded text-xs flex items-center gap-2">
+                                {t}
+                                <button onClick={() => removeTech(t, showEditModal)} className="hover:text-red-300"><Icon name="fa-times"/></button>
+                            </span>
+                        ))}
+                        {((showEditModal ? editProjectData.technologies : newProject.technologies)?.length || 0) === 0 && (
+                            <span className="text-xs text-slate-400 italic">Sin tecnologías seleccionadas.</span>
+                        )}
+                    </div>
+                 </div>
 
                  {/* Dates */}
                  <div className="grid grid-cols-2 gap-4">
@@ -520,7 +531,7 @@ export const ProjectsView = ({
 
                          <div className="border rounded-lg p-2 max-h-48 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-2 bg-slate-50">
                              {users.map(u => {
-                                 const activeCount = projects.filter(p => p.status === 'En Curso' && (p.teamIds.includes(u.id) || p.leadId === u.id)).length;
+                                 const activeCount = projects.filter(p => p.status !== 'Finalizado' && (p.teamIds.includes(u.id) || p.leadId === u.id)).length;
                                  const isSelected = newProject.teamIds?.includes(u.id);
                                  
                                  return (
@@ -545,7 +556,7 @@ export const ProjectsView = ({
                  )}
              </div>
              
-             {/* FOOTER - FIXED */}
+             {/* FOOTER */}
              <div className="p-4 border-t bg-slate-50 md:rounded-b-2xl shrink-0 flex gap-2">
                 <button onClick={() => {setShowCreateModal(false); setShowEditModal(false);}} className="flex-1 py-3 bg-slate-200 text-slate-600 font-bold rounded-lg hover:bg-slate-300 transition-colors">Cancelar</button>
                 <button onClick={showEditModal ? handleUpdate : handleCreate} className="flex-1 py-3 bg-ada-600 text-white font-bold rounded-lg shadow-lg hover:bg-ada-700 transition-colors">Guardar</button>
