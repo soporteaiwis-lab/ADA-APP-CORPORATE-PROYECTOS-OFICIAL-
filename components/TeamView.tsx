@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, UserRole } from '../types';
 
 const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
@@ -23,6 +23,18 @@ export const TeamView = ({
    const [formData, setFormData] = useState<Partial<User>>({});
 
    const isAdmin = currentUser.role === UserRole.ADMIN || currentUser.role === UserRole.CEO;
+
+   // ESC Listener
+   useEffect(() => {
+     const handleKeyDown = (e: KeyboardEvent) => {
+       if (e.key === 'Escape') {
+         setEditingUser(null);
+         setIsAdding(false);
+       }
+     };
+     window.addEventListener('keydown', handleKeyDown);
+     return () => window.removeEventListener('keydown', handleKeyDown);
+   }, []);
 
    const checkPermission = () => {
        if (isAdmin) return true;
@@ -120,15 +132,15 @@ export const TeamView = ({
         ))}
       </div>
 
-      {/* Edit/Add Modal */}
+      {/* Edit/Add Modal - OPTIMIZED */}
       {(editingUser || isAdding) && (
           <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
-                  <div className="flex justify-between items-center mb-4">
+              <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl flex flex-col md:max-h-[90vh] overflow-hidden">
+                  <div className="p-6 border-b flex justify-between items-center shrink-0">
                       <h3 className="text-xl font-bold">{isAdding ? 'Agregar Miembro' : 'Editar Perfil'}</h3>
-                      <button onClick={() => {setEditingUser(null); setIsAdding(false);}}><Icon name="fa-times" /></button>
+                      <button onClick={() => {setEditingUser(null); setIsAdding(false);}} className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200"><Icon name="fa-times" /></button>
                   </div>
-                  <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+                  <div className="p-6 space-y-4 overflow-y-auto flex-1">
                       <input className="w-full border p-2 rounded" placeholder="Nombre" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
                       <input className="w-full border p-2 rounded" placeholder="Email" value={formData.email || ''} onChange={e => setFormData({...formData, email: e.target.value})} />
                       <select className="w-full border p-2 rounded" value={formData.role} onChange={e => setFormData({...formData, role: e.target.value as UserRole})}>
@@ -152,8 +164,9 @@ export const TeamView = ({
                           <button onClick={addSkill} className="text-xs text-blue-600 hover:underline">+ Agregar Habilidad</button>
                       </div>
                   </div>
-                  <div className="mt-6 flex justify-end gap-2">
-                      <button onClick={handleSave} className="bg-ada-600 text-white px-4 py-2 rounded-lg font-bold">Guardar</button>
+                  <div className="p-4 border-t bg-slate-50 flex justify-end gap-2 shrink-0">
+                      <button onClick={() => {setEditingUser(null); setIsAdding(false);}} className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded">Cancelar</button>
+                      <button onClick={handleSave} className="bg-ada-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-ada-700">Guardar</button>
                   </div>
               </div>
           </div>

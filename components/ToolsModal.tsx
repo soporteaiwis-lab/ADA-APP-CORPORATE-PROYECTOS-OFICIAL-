@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tool } from '../types';
 
 const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
@@ -22,6 +22,15 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
   // New State for "Launcher Assistant" to fix the "stale copy" bug
   const [selectedLocalTool, setSelectedLocalTool] = useState<Tool | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+
+  // ESC Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleAddTool = () => {
     if(!newTool.name || !newTool.url) return;
@@ -126,7 +135,7 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
       {/* --- MODAL 1: LOCAL APP LAUNCHER ASSISTANT (Fixes the "Stuck" issue) --- */}
       {selectedLocalTool && (
         <div className="fixed inset-0 z-[90] bg-black/80 flex items-center justify-center p-4 animate-scale-up backdrop-blur-sm">
-            <div className="bg-white rounded-2xl max-w-md w-full p-6 relative shadow-2xl">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 relative shadow-2xl flex flex-col md:max-h-[90vh]">
                 <button onClick={() => setSelectedLocalTool(null)} className="absolute top-4 right-4 text-slate-400 hover:text-red-500"><Icon name="fa-times" /></button>
                 
                 <div className="text-center mb-6">
@@ -169,13 +178,13 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
       {/* --- MODAL 2: ADD NEW TOOL --- */}
       {isAdding && (
             <div className="absolute inset-0 bg-slate-900/90 flex items-center justify-center p-4 z-[90] animate-scale-up">
-                <div className="bg-slate-800 rounded-2xl w-full max-w-lg p-6 border border-slate-700 shadow-2xl">
-                    <div className="flex justify-between items-center mb-6">
+                <div className="bg-slate-800 rounded-2xl w-full max-w-lg p-6 border border-slate-700 shadow-2xl flex flex-col md:max-h-[90vh] overflow-hidden">
+                    <div className="flex justify-between items-center mb-6 shrink-0">
                         <h3 className="text-white text-xl font-bold">Agregar Herramienta</h3>
                         <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-white"><Icon name="fa-times" /></button>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 overflow-y-auto flex-1">
                         <div>
                             <label className="text-xs font-bold text-slate-400 uppercase">Nombre</label>
                             <input 
@@ -222,7 +231,7 @@ export const ToolsModal = ({ onClose, tools, onAddTool }: { onClose: () => void,
                         </div>
                     </div>
 
-                    <div className="flex gap-3 mt-8">
+                    <div className="flex gap-3 mt-8 shrink-0">
                         <button onClick={() => setIsAdding(false)} className="flex-1 py-3 text-slate-400 hover:bg-slate-700 rounded-lg">Cancelar</button>
                         <button onClick={handleAddTool} className="flex-1 py-3 bg-ada-600 hover:bg-ada-500 text-white rounded-lg font-bold">Agregar</button>
                     </div>

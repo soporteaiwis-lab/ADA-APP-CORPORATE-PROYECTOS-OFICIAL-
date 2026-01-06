@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Project, User, UserRole, ProjectLog } from '../types';
 import { RepositoryManager } from './RepositoryManager'; 
 
@@ -46,6 +46,23 @@ export const ProjectsView = ({
   });
 
   const [editProjectData, setEditProjectData] = useState<Partial<Project>>({});
+
+  // --- ESC KEY LISTENER (MASTER CLOSE) ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowCreateModal(false);
+        setShowEditModal(false);
+        setShowLogModal(false);
+        setShowTeamModal(false);
+        setShowReqModal(false);
+        setRepoManagerConfig(null);
+        setActiveMenuId(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleCreate = () => {
     if (!newProject.name || !newProject.client) return;
@@ -260,14 +277,17 @@ export const ProjectsView = ({
         ))}
       </div>
       
-      {/* Create/Edit Modal */}
+      {/* Create/Edit Modal - OPTIMIZED */}
       {(showCreateModal || showEditModal) && (
-        <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center">
-          <div className="w-full h-full md:h-auto md:max-w-[700px] bg-white md:rounded-2xl flex flex-col shadow-2xl">
-             <div className="p-4 border-b flex justify-between items-center bg-slate-50 md:bg-white md:rounded-t-2xl">
+        <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center p-4">
+          <div className="w-full h-full md:h-auto md:max-h-[90vh] md:max-w-[700px] bg-white md:rounded-2xl flex flex-col shadow-2xl overflow-hidden animate-scale-up">
+             {/* HEADER - FIXED */}
+             <div className="p-4 border-b flex justify-between items-center bg-slate-50 md:bg-white md:rounded-t-2xl shrink-0">
                 <h3 className="text-lg font-bold">{showEditModal ? 'Editar Proyecto' : 'Nuevo Proyecto'}</h3>
-                <button onClick={() => {setShowCreateModal(false); setShowEditModal(false);}} className="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full"><Icon name="fa-times"/></button>
+                <button onClick={() => {setShowCreateModal(false); setShowEditModal(false);}} className="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full hover:bg-slate-300 transition-colors"><Icon name="fa-times"/></button>
              </div>
+             
+             {/* BODY - SCROLLABLE */}
              <div className="p-6 overflow-y-auto flex-1 space-y-6">
                  {/* Basic Info */}
                  <div className="space-y-4">
@@ -325,19 +345,22 @@ export const ProjectsView = ({
                      </div>
                  )}
              </div>
-             <div className="p-4 border-t bg-slate-50 md:rounded-b-2xl">
-                <button onClick={showEditModal ? handleUpdate : handleCreate} className="w-full py-3 bg-ada-600 text-white font-bold rounded-lg shadow-lg">Guardar</button>
+             
+             {/* FOOTER - FIXED */}
+             <div className="p-4 border-t bg-slate-50 md:rounded-b-2xl shrink-0 flex gap-2">
+                <button onClick={() => {setShowCreateModal(false); setShowEditModal(false);}} className="flex-1 py-3 bg-slate-200 text-slate-600 font-bold rounded-lg hover:bg-slate-300 transition-colors">Cancelar</button>
+                <button onClick={showEditModal ? handleUpdate : handleCreate} className="flex-1 py-3 bg-ada-600 text-white font-bold rounded-lg shadow-lg hover:bg-ada-700 transition-colors">Guardar</button>
              </div>
           </div>
         </div>
       )}
       
       {showLogModal && selectedProject && (
-          <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center">
-              <div className="w-full h-full md:h-[600px] md:max-w-[600px] bg-white md:rounded-2xl flex flex-col shadow-2xl">
-                  <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+          <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center p-4">
+              <div className="w-full h-full md:h-auto md:max-h-[90vh] md:max-w-[600px] bg-white md:rounded-2xl flex flex-col shadow-2xl overflow-hidden animate-scale-up">
+                  <div className="p-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
                       <h3 className="font-bold text-lg">Bitácora</h3>
-                      <button onClick={()=>setShowLogModal(false)} className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center"><Icon name="fa-times"/></button>
+                      <button onClick={()=>setShowLogModal(false)} className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center hover:bg-slate-300"><Icon name="fa-times"/></button>
                   </div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
                     {selectedProject.logs?.length === 0 && <p className="text-center text-slate-400 mt-10">Sin registros.</p>}
@@ -361,11 +384,11 @@ export const ProjectsView = ({
       )}
 
       {showTeamModal && selectedProject && (
-          <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center">
-              <div className="w-full h-full md:h-[600px] md:max-w-[500px] bg-white md:rounded-2xl flex flex-col shadow-2xl">
-                  <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+          <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center p-4">
+              <div className="w-full h-full md:h-auto md:max-h-[90vh] md:max-w-[500px] bg-white md:rounded-2xl flex flex-col shadow-2xl overflow-hidden animate-scale-up">
+                  <div className="p-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
                       <h3 className="font-bold text-lg">Asignar Equipo</h3>
-                      <button onClick={()=>setShowTeamModal(false)} className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center"><Icon name="fa-times"/></button>
+                      <button onClick={()=>setShowTeamModal(false)} className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center hover:bg-slate-300"><Icon name="fa-times"/></button>
                   </div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-2">
                      {users.map(u => {
@@ -389,11 +412,11 @@ export const ProjectsView = ({
       )}
 
       {showReqModal && selectedProject && (
-          <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center">
-              <div className="w-full h-full md:h-auto md:max-w-[600px] bg-white md:rounded-2xl flex flex-col shadow-2xl">
-                  <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+          <div className="fixed inset-0 z-[60] bg-white md:bg-black/50 flex flex-col md:justify-center md:items-center p-4">
+              <div className="w-full h-full md:h-auto md:max-h-[90vh] md:max-w-[600px] bg-white md:rounded-2xl flex flex-col shadow-2xl overflow-hidden animate-scale-up">
+                  <div className="p-4 border-b flex justify-between items-center bg-slate-50 shrink-0">
                       <h3 className="font-bold text-lg">Resumen Proyecto</h3>
-                      <button onClick={()=>setShowReqModal(false)} className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center"><Icon name="fa-times"/></button>
+                      <button onClick={()=>setShowReqModal(false)} className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center hover:bg-slate-300"><Icon name="fa-times"/></button>
                   </div>
                   <div className="p-6 overflow-y-auto flex-1">
                       <h4 className="text-sm font-bold text-slate-400 uppercase mb-2">Descripción General</h4>

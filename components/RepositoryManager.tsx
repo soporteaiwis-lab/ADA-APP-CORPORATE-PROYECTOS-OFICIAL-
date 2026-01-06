@@ -32,6 +32,15 @@ export const RepositoryManager = ({ project, initialType, onClose, onUpdateProje
   const [activeTab, setActiveTab] = useState<'github' | 'drive'>(initialType);
   const [viewMode, setViewMode] = useState<'list' | 'add'>('list');
   
+  // --- ESC KEY LISTENER ---
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   // --- GITHUB TOKEN LOGIC (RESTORED TO CLASSIC) ---
   const getStoredGithubToken = () => {
       return localStorage.getItem('ada_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN || '';

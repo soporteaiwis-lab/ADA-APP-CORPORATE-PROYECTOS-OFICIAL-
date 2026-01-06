@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Gem } from '../types';
 
 const Icon = ({ name, className = "" }: { name: string, className?: string }) => (
@@ -8,6 +8,15 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
 export const GemsView = ({ gems, onAddGem }: { gems: Gem[], onAddGem: (g: Gem) => void }) => {
   const [showModal, setShowModal] = useState(false);
   const [newGem, setNewGem] = useState({ name: '', description: '', url: '', icon: '' });
+
+  // ESC Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowModal(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleAdd = () => {
     if (!newGem.name || !newGem.url) return;
@@ -42,17 +51,18 @@ export const GemsView = ({ gems, onAddGem }: { gems: Gem[], onAddGem: (g: Gem) =
         ))}
       </div>
        
+       {/* OPTIMIZED MODAL */}
        {showModal && (
         <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-slate-800">
-            <h3 className="text-lg font-bold mb-4">Agregar Gema</h3>
-            <div className="space-y-3">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl text-slate-800 flex flex-col md:max-h-[90vh]">
+            <h3 className="text-lg font-bold mb-4 shrink-0">Agregar Gema</h3>
+            <div className="space-y-3 overflow-y-auto flex-1">
               <input className="w-full border p-2 rounded-lg text-sm" placeholder="Nombre" value={newGem.name} onChange={e => setNewGem({...newGem, name: e.target.value})} />
               <input className="w-full border p-2 rounded-lg text-sm" placeholder="Descripción" value={newGem.description} onChange={e => setNewGem({...newGem, description: e.target.value})} />
               <input className="w-full border p-2 rounded-lg text-sm" placeholder="URL" value={newGem.url} onChange={e => setNewGem({...newGem, url: e.target.value})} />
               <input className="w-full border p-2 rounded-lg text-sm" placeholder="Icono (fa-icon)" value={newGem.icon} onChange={e => setNewGem({...newGem, icon: e.target.value})} />
             </div>
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex justify-end gap-2 mt-4 shrink-0">
               <button onClick={() => setShowModal(false)} className="text-slate-500 text-sm px-3 py-2">Cancelar</button>
               <button onClick={handleAdd} className="bg-ada-600 text-white text-sm px-4 py-2 rounded-lg">Guardar</button>
             </div>

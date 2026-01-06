@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Project } from '../types';
 import { APP_CONFIG } from '../constants'; // Import to check status
 
@@ -22,6 +22,15 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
       githubToken: localStorage.getItem('ada_env_GITHUB_TOKEN') || '',
       googleClientId: localStorage.getItem('ada_env_GOOGLE_CLIENT_ID') || ''
   });
+
+  // ESC Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowConfig(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleSaveKeys = () => {
       try {
@@ -164,10 +173,10 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
         </div>
       </div>
 
-      {/* Manual Configuration Modal */}
+      {/* Manual Configuration Modal - OPTIMIZED */}
       {showConfig && (
           <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
-              <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col md:max-h-[90vh]">
                   <div className="bg-slate-900 p-4 flex justify-between items-center text-white shrink-0">
                       <h3 className="font-bold flex items-center gap-2"><Icon name="fa-cogs" /> Configuración de Sistema</h3>
                       <button onClick={() => setShowConfig(false)} className="hover:text-red-400"><Icon name="fa-times" /></button>
