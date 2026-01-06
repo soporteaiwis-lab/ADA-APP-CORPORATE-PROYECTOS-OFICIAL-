@@ -36,135 +36,152 @@ export const APP_CONFIG = {
   GOOGLE_CLIENT_ID: getEnvVar('GOOGLE_CLIENT_ID')
 };
 
-// Real ADA Team
+// --- NUEVO EQUIPO ADA ---
 export const INITIAL_USERS: User[] = [
   {
-    id: 'u1',
-    name: 'Gonzalo Arias',
+    id: 'u_julio',
+    name: 'Julio Sepulveda',
     role: UserRole.CEO,
-    email: 'gonzalo.arias@ada.cl',
+    email: 'jspulveda@ada.cl',
     password: '1234',
-    avatar: 'https://ui-avatars.com/api/?name=Gonzalo+Arias&background=0D8ABC&color=fff',
+    avatar: 'https://ui-avatars.com/api/?name=Julio+Sepulveda&background=0D8ABC&color=fff',
     skills: [
-      { name: 'Leadership', level: 100 },
-      { name: 'Strategic Planning', level: 95 },
-      { name: 'Business Intelligence', level: 90 },
-      { name: 'Cloud Architecture', level: 90 }
-    ],
-    projects: ['PROYECTO_001', 'PROYECTO_003', 'PROYECTO_004']
-  },
-  {
-    id: 'u2',
-    name: 'Armin Salazar',
-    role: UserRole.ADMIN, // Super Admin Privilege
-    email: 'soporte.aiwis@gmail.com', // Mantener email de soporte externo o cambiar a armin@ada.cl si se requiere
-    password: '1234',
-    avatar: 'https://ui-avatars.com/api/?name=Armin+Salazar&background=ff0000&color=fff',
-    skills: [
-      { name: 'Full Stack Management', level: 100 },
-      { name: 'System Architecture', level: 100 },
-      { name: 'React & AI', level: 98 },
-      { name: 'Scrum Master', level: 95 }
+      { name: 'Dirección General', level: 100 },
+      { name: 'Estrategia de Negocios', level: 98 },
+      { name: 'Gestión de Proyectos', level: 95 }
     ],
     projects: ['PROYECTO_001', 'PROYECTO_002', 'PROYECTO_003', 'PROYECTO_004']
   },
   {
-    id: 'u3',
-    name: 'Gabriel Martinez',
-    role: UserRole.DEVELOPER,
-    email: 'gabriel.martinez@ada.cl',
+    id: 'u_armin',
+    name: 'Armin Salazar',
+    role: UserRole.ADMIN, // Mentor AIWIS (Super Admin permissions)
+    email: 'armin.salazar@aiwis.cl',
     password: '1234',
-    avatar: 'https://ui-avatars.com/api/?name=Gabriel+Martinez&background=random',
+    avatar: 'https://ui-avatars.com/api/?name=Armin+Salazar&background=ff0000&color=fff',
     skills: [
-      { name: 'Full Stack', level: 90 },
-      { name: 'React', level: 85 },
-      { name: 'Node.js', level: 85 }
+      { name: 'Mentoria Tecnológica', level: 100 },
+      { name: 'Arquitectura AI', level: 100 },
+      { name: 'Integración de Sistemas', level: 98 }
+    ],
+    projects: ['PROYECTO_001', 'PROYECTO_004']
+  },
+  {
+    id: 'u_andrea',
+    name: 'Andrea Martínez',
+    role: UserRole.ANALYST,
+    email: 'amartinez@ada.cl',
+    password: '1234',
+    avatar: 'https://ui-avatars.com/api/?name=Andrea+Martinez&background=random',
+    skills: [
+      { name: 'Análisis de Datos', level: 90 },
+      { name: 'Gestión Documental', level: 85 }
     ],
     projects: ['PROYECTO_001']
   },
   {
-    id: 'u4',
-    name: 'Francisco Valenzuela',
+    id: 'u_crizla',
+    name: 'Crizla Urrutia',
     role: UserRole.DEVELOPER,
-    email: 'francisco.valenzuela@ada.cl',
+    email: 'currutia@ada.cl',
     password: '1234',
-    avatar: 'https://ui-avatars.com/api/?name=Francisco+Valenzuela&background=random',
+    avatar: 'https://ui-avatars.com/api/?name=Crizla+Urrutia&background=random',
     skills: [
-      { name: 'Backend', level: 92 },
-      { name: 'Python', level: 88 },
-      { name: 'SQL', level: 90 }
-    ],
-    projects: ['PROYECTO_003']
-  },
-  {
-    id: 'u5',
-    name: 'Anibal Alcazar',
-    role: UserRole.DEVELOPER,
-    email: 'anibal.alcazar@ada.cl',
-    password: '1234',
-    avatar: 'https://ui-avatars.com/api/?name=Anibal+Alcazar&background=random',
-    skills: [
-      { name: 'Frontend', level: 90 },
-      { name: 'UI/UX Implementation', level: 85 },
-      { name: 'JavaScript', level: 92 }
+      { name: 'Desarrollo Frontend', level: 85 },
+      { name: 'UX/UI', level: 80 }
     ],
     projects: ['PROYECTO_002']
   },
   {
-    id: 'u6',
-    name: 'Juan Escalona',
-    role: UserRole.DEVELOPER,
-    email: 'juan.escalona@ada.cl',
-    password: '1234',
-    avatar: 'https://ui-avatars.com/api/?name=Juan+Escalona&background=random',
-    skills: [
-      { name: 'DevOps', level: 85 },
-      { name: 'Cloud Infrastructure', level: 88 },
-      { name: 'Security', level: 80 }
-    ],
-    projects: ['PROYECTO_004']
-  },
-  {
-    id: 'u7',
-    name: 'Cristobal Arias',
-    role: UserRole.DEVELOPER,
-    email: 'cristobal.ariasb@ada.cl',
-    password: '1234',
-    avatar: 'https://ui-avatars.com/api/?name=Cristobal+Arias&background=random',
-    skills: [
-      { name: 'Mobile Dev', level: 85 },
-      { name: 'Flutter', level: 80 },
-      { name: 'API Integration', level: 85 }
-    ],
-    projects: ['PROYECTO_002']
-  },
-  {
-    id: 'u8',
-    name: 'Alejandro Venegas',
+    id: 'u_doris',
+    name: 'Doris Macaya',
     role: UserRole.ANALYST,
-    email: 'alejandro.venegas@ada.cl',
+    email: 'dmacaya@ada.cl',
     password: '1234',
-    avatar: 'https://ui-avatars.com/api/?name=Alejandro+Venegas&background=random',
+    avatar: 'https://ui-avatars.com/api/?name=Doris+Macaya&background=random',
     skills: [
-      { name: 'QA Automation', level: 90 },
-      { name: 'Data Analysis', level: 85 },
-      { name: 'Testing', level: 92 }
+      { name: 'QA Testing', level: 90 },
+      { name: 'Documentación', level: 95 }
     ],
     projects: ['PROYECTO_001', 'PROYECTO_003']
   },
   {
-    id: 'u9',
-    name: 'Fernando Cid',
-    role: UserRole.DESIGNER,
-    email: 'fernando.cid@ada.cl',
+    id: 'u_erika',
+    name: 'Erika Chiappa',
+    role: UserRole.DEVELOPER,
+    email: 'echiappa@ada.cl',
     password: '1234',
-    avatar: 'https://ui-avatars.com/api/?name=Fernando+Cid&background=random',
+    avatar: 'https://ui-avatars.com/api/?name=Erika+Chiappa&background=random',
     skills: [
-      { name: 'Product Design', level: 95 },
-      { name: 'Figma', level: 98 },
-      { name: 'Prototyping', level: 90 }
+      { name: 'Backend Java', level: 88 },
+      { name: 'SQL', level: 85 }
+    ],
+    projects: ['PROYECTO_003']
+  },
+  {
+    id: 'u_raul',
+    name: 'Raul Alarcon',
+    role: UserRole.DEVELOPER,
+    email: 'ralarcon@ada.cl',
+    password: '1234',
+    avatar: 'https://ui-avatars.com/api/?name=Raul+Alarcon&background=random',
+    skills: [
+      { name: 'Full Stack', level: 90 },
+      { name: 'Python', level: 85 }
+    ],
+    projects: ['PROYECTO_004']
+  },
+  {
+    id: 'u_pedro',
+    name: 'Pedro Concha',
+    role: UserRole.PROJECT_MANAGER,
+    email: 'pconcha@ada.cl',
+    password: '1234',
+    avatar: 'https://ui-avatars.com/api/?name=Pedro+Concha&background=random',
+    skills: [
+      { name: 'Gestión de Equipos', level: 92 },
+      { name: 'Scrum', level: 90 }
+    ],
+    projects: ['PROYECTO_001', 'PROYECTO_002']
+  },
+  {
+    id: 'u_rafael',
+    name: 'Rafael Valdés',
+    role: UserRole.DEVELOPER,
+    email: 'rvaldes@ada.cl',
+    password: '1234',
+    avatar: 'https://ui-avatars.com/api/?name=Rafael+Valdes&background=random',
+    skills: [
+      { name: 'DevOps', level: 85 },
+      { name: 'Cloud AWS', level: 80 }
+    ],
+    projects: ['PROYECTO_004']
+  },
+  {
+    id: 'u_pablo',
+    name: 'Pablo Retamal',
+    role: UserRole.DEVELOPER,
+    email: 'pretamal@ada.cl',
+    password: '1234',
+    avatar: 'https://ui-avatars.com/api/?name=Pablo+Retamal&background=random',
+    skills: [
+      { name: 'Mobile Dev', level: 88 },
+      { name: 'React Native', level: 85 }
     ],
     projects: ['PROYECTO_002']
+  },
+  {
+    id: 'u_hugo',
+    name: 'Hugo Zapata',
+    role: UserRole.ANALYST,
+    email: 'hzapata@ada.cl',
+    password: '1234',
+    avatar: 'https://ui-avatars.com/api/?name=Hugo+Zapata&background=random',
+    skills: [
+      { name: 'Business Intelligence', level: 85 },
+      { name: 'Power BI', level: 90 }
+    ],
+    projects: ['PROYECTO_003']
   }
 ];
 
@@ -174,8 +191,8 @@ export const INITIAL_PROJECTS: Project[] = [
     name: 'Sistema de Facturación Interna',
     client: 'Interno ADA',
     encargadoCliente: 'Gerencia Admin',
-    leadId: 'u2',
-    teamIds: ['u3', 'u8', 'u1', 'u2'],
+    leadId: 'u_pedro', // Pedro Concha (PM)
+    teamIds: ['u_andrea', 'u_doris', 'u_armin', 'u_julio'],
     status: 'En Curso',
     isOngoing: true,
     report: true,
@@ -187,10 +204,10 @@ export const INITIAL_PROJECTS: Project[] = [
     technologies: ['AWS', 'Python', 'Spark', 'Terraform'],
     logs: [
       { id: 'l1', date: '2025-02-10T10:00:00', text: 'Inicio de la fase de diseño de arquitectura.', author: 'Armin Salazar' },
-      { id: 'l2', date: '2025-02-12T14:30:00', text: 'Reunión con contabilidad para definir esquema de base de datos.', author: 'Gabriel Martinez' }
+      { id: 'l2', date: '2025-02-12T14:30:00', text: 'Reunión con contabilidad para definir esquema de base de datos.', author: 'Andrea Martínez' }
     ],
     repositories: [
-        { id: 'r1', type: 'github', alias: 'Repositorio Fuente', url: 'https://github.com/soporteaiwis-lab/SIMPLEDATA-APP' }, // Keep URL legacy or update if repo changes
+        { id: 'r1', type: 'github', alias: 'Repositorio Fuente', url: 'https://github.com/soporteaiwis-lab/SIMPLEDATA-APP' }, 
         { id: 'r2', type: 'drive', alias: 'Documentación Oficial', url: 'https://drive.google.com/drive/folders/1S3Zavf6xdp9WaM8-gowBJImdkmSD_Niw' }
     ]
   },
@@ -199,8 +216,8 @@ export const INITIAL_PROJECTS: Project[] = [
     name: 'Desarrollo de App Móvil Clientes',
     client: 'Cliente Retail XYZ',
     encargadoCliente: 'Gerente de Innovación',
-    leadId: 'u2',
-    teamIds: ['u5', 'u7', 'u9', 'u2'],
+    leadId: 'u_pablo', // Pablo Retamal (Mobile)
+    teamIds: ['u_crizla', 'u_pedro', 'u_julio'],
     status: 'En Curso',
     isOngoing: true,
     report: true,
@@ -220,8 +237,8 @@ export const INITIAL_PROJECTS: Project[] = [
     name: 'Migración de Servidores Cloud',
     client: 'Empresa Logística ABC',
     encargadoCliente: 'Jefe de IT',
-    leadId: 'u4',
-    teamIds: ['u8', 'u1', 'u2'],
+    leadId: 'u_erika', // Erika (Backend)
+    teamIds: ['u_doris', 'u_hugo', 'u_julio'],
     status: 'En Curso',
     isOngoing: true,
     report: true,
@@ -232,7 +249,7 @@ export const INITIAL_PROJECTS: Project[] = [
     description: 'Migrar la infraestructura on-premise del cliente a un entorno cloud en AWS, optimizando costos y mejorando la escalabilidad.',
     technologies: ['AWS', 'Docker', 'Linux'],
     logs: [
-       { id: 'l1', date: '2024-12-01T18:00:00', text: 'Instancias EC2 configuradas.', author: 'Francisco Valenzuela' }
+       { id: 'l1', date: '2024-12-01T18:00:00', text: 'Instancias EC2 configuradas.', author: 'Erika Chiappa' }
     ],
     repositories: []
   },
@@ -241,8 +258,8 @@ export const INITIAL_PROJECTS: Project[] = [
     name: 'Infraestructura DevSecOps',
     client: 'Banco Financiero',
     encargadoCliente: 'CISO',
-    leadId: 'u6',
-    teamIds: ['u1', 'u2'],
+    leadId: 'u_rafael', // Rafael (DevOps)
+    teamIds: ['u_raul', 'u_armin', 'u_julio'],
     status: 'En Curso',
     isOngoing: true,
     report: true,
@@ -253,7 +270,7 @@ export const INITIAL_PROJECTS: Project[] = [
     description: 'Implementación de pipelines de seguridad y auditoría automatizada.',
     technologies: ['Jenkins', 'SonarQube', 'Kubernetes'],
     logs: [
-       { id: 'l1', date: '2025-01-20T10:00:00', text: 'Pipelines base creados.', author: 'Juan Escalona' }
+       { id: 'l1', date: '2025-01-20T10:00:00', text: 'Pipelines base creados.', author: 'Rafael Valdés' }
     ],
     repositories: []
   }
