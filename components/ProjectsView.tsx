@@ -7,17 +7,17 @@ const Icon = ({ name, className = "" }: { name: string, className?: string }) =>
   <i className={`fa-solid ${name} ${className}`}></i>
 );
 
-// STATUS CONFIGURATION
-const PROJECT_STATUSES: ProjectStatus[] = ['Planificación', 'En Desarrollo', 'En QA', 'Despliegue', 'Finalizado'];
+// STATUS CONFIGURATION - Includes Legacy 'En Curso' for compatibility
+const PROJECT_STATUSES: ProjectStatus[] = ['Planificación', 'En Desarrollo', 'En QA', 'Despliegue', 'Finalizado', 'En Curso'];
 
 const getStatusColor = (s: ProjectStatus) => {
     switch(s) {
-        case 'Planificación': return 'bg-purple-100 text-purple-700';
-        case 'En Desarrollo': return 'bg-blue-100 text-blue-700';
-        case 'En QA': return 'bg-orange-100 text-orange-700';
-        case 'Despliegue': return 'bg-teal-100 text-teal-700';
-        case 'Finalizado': return 'bg-slate-200 text-slate-500';
-        case 'En Curso': return 'bg-blue-50 text-blue-600'; // Legacy fallback
+        case 'Planificación': return 'bg-purple-100 text-purple-700 border-purple-200';
+        case 'En Desarrollo': return 'bg-blue-100 text-blue-700 border-blue-200';
+        case 'En Curso': return 'bg-blue-50 text-blue-600 border-blue-200'; // Legacy handled
+        case 'En QA': return 'bg-orange-100 text-orange-700 border-orange-200';
+        case 'Despliegue': return 'bg-teal-100 text-teal-700 border-teal-200';
+        case 'Finalizado': return 'bg-slate-200 text-slate-500 border-slate-300';
         default: return 'bg-slate-100 text-slate-500';
     }
 };
@@ -52,6 +52,9 @@ export const ProjectsView = ({
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [filters, setFilters] = useState({ name: '', client: '', status: 'Todos' });
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  // LOGS STATE
+  const [newLogText, setNewLogText] = useState('');
 
   // AI Analysis State
   const [aiRecommendation, setAiRecommendation] = useState<string>('');
@@ -187,6 +190,33 @@ export const ProjectsView = ({
       } 
   };
   
+  // --- LOGIC FOR LOGS ---
+  const handleOpenLog = (p: Project) => { 
+      setSelectedProject(p); 
+      setNewLogText('');
+      setShowLogModal(true); 
+  };
+
+  const handleAddLog = () => {
+      if (!selectedProject || !newLogText.trim()) return;
+      
+      const newLog: ProjectLog = {
+          id: `l_${Date.now()}`,
+          date: new Date().toISOString(),
+          text: newLogText,
+          author: currentUser.name
+      };
+
+      const updatedProject = {
+          ...selectedProject,
+          logs: [...(selectedProject.logs || []), newLog]
+      };
+
+      onUpdateProject(updatedProject);
+      setSelectedProject(updatedProject); // Update local state for immediate view
+      setNewLogText('');
+  };
+  
   // --- TECH STACK HANDLERS ---
   const addTech = (tech: string, isEdit: boolean) => {
       if (!tech) return;
@@ -213,7 +243,6 @@ export const ProjectsView = ({
       setActiveMenuId(null);
   };
   
-  const handleOpenLog = (p: Project) => { setSelectedProject(p); setShowLogModal(true); };
   const handleOpenTeam = (p: Project) => { setSelectedProject(p); setShowTeamModal(true); };
   const handleOpenReq = (p: Project) => { setSelectedProject(p); setShowReqModal(true); };
   
@@ -273,7 +302,15 @@ export const ProjectsView = ({
 
   const filteredProjects = projects.filter(p => {
     const matchName = p.name.toLowerCase().includes(filters.name.toLowerCase()) || p.id.toLowerCase().includes(filters.name.toLowerCase());
-    const matchStatus = filters.status === 'Todos' ? true : p.status === filters.status;
+    
+    // Status Filter Logic: treat "En Curso" (legacy) similar to "En Desarrollo" if the user filters for "En Desarrollo"
+    let matchStatus = false;
+    if (filters.status === 'Todos') {
+        matchStatus = true;
+    } else {
+        matchStatus = p.status === filters.status;
+    }
+
     return matchName && p.client.toLowerCase().includes(filters.client.toLowerCase()) && matchStatus;
   });
 
@@ -338,17 +375,32 @@ export const ProjectsView = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredProjects.map(project => (
-                  <tr key={project.id} className="hover:bg-slate-50">
+              {filteredProjects.map(project => {
+                  const isAssigned = project.teamIds.includes(currentUser.id) || project.leadId === currentUser.id;
+                  return (
+                  <tr key={project.id} className={`hover:bg-slate-50 ${isAssigned ? 'bg-red-50/30' : ''}`}>
                     <td className="p-3">
-                        <div className="font-bold truncate">{project.name}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{project.id}</div>
-                        <button onClick={()=>handleOpenReq(project)} className="text-xs text-blue-500 hover:underline">Ver Resumen</button>
+                        <div className="flex items-center gap-2">
+                            {isAssigned && <div className="w-1.5 h-8 bg-red-500 rounded-full" title="Estás asignado a este proyecto"></div>}
+                            <div className="min-w-0">
+                                <div className={`font-bold truncate ${isAssigned ? 'text-red-700' : 'text-slate-800'}`}>{project.name}</div>
+                                <div className="text-[10px] text-slate-400 font-mono">{project.id}</div>
+                                <button onClick={()=>handleOpenReq(project)} className="text-xs text-blue-500 hover:underline">Ver Resumen</button>
+                            </div>
+                        </div>
                     </td>
                     <td className="p-3"><div className="truncate">{project.client}</div></td>
-                    <td className="p-3 text-center"><button onClick={()=>handleOpenTeam(project)} className="w-8 h-8 rounded-full border hover:bg-slate-100"><Icon name="fa-users-cog"/></button></td>
+                    <td className="p-3 text-center">
+                        <button 
+                            onClick={()=>handleOpenTeam(project)} 
+                            className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all shadow-sm ${isAssigned ? 'bg-red-100 border-red-300 text-red-600 font-bold animate-pulse' : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-500'}`}
+                            title={isAssigned ? "Estás en este Equipo" : "Ver Equipo"}
+                        >
+                            <Icon name="fa-users-cog" className={isAssigned ? "text-lg" : ""}/>
+                        </button>
+                    </td>
                     <td className="p-3 text-xs"><div>In: {new Date(project.startDate || '').toLocaleDateString()}</div><div>Fin: {new Date(project.deadline).toLocaleDateString()}</div></td>
-                    <td className="p-3 text-center"><span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${getStatusColor(project.status)}`}>{project.status}</span></td>
+                    <td className="p-3 text-center"><span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase border ${getStatusColor(project.status)}`}>{project.status}</span></td>
                     <td className="p-3 text-center">
                         <div className="flex justify-center gap-1">
                             <button onClick={()=>openRepoManager(project,'drive')} className="p-1 relative group">
@@ -361,7 +413,7 @@ export const ProjectsView = ({
                     </td>
                     <td className="p-3 text-center"><div className="flex justify-center gap-1"><button onClick={()=>handleOpenEdit(project)} className="p-1.5 hover:bg-slate-100 rounded"><Icon name="fa-pen"/></button><button onClick={()=>handleOpenLog(project)} className="p-1.5 hover:bg-slate-100 rounded text-blue-500"><Icon name="fa-history"/></button><button onClick={()=>onDeleteProject(project.id)} className="p-1.5 hover:bg-slate-100 rounded text-red-500"><Icon name="fa-trash"/></button></div></td>
                   </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
@@ -369,21 +421,23 @@ export const ProjectsView = ({
 
       {/* --- MOBILE CARD VIEW --- */}
       <div className="lg:hidden space-y-4">
-        {filteredProjects.map(project => (
-           <div key={project.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-3">
+        {filteredProjects.map(project => {
+           const isAssigned = project.teamIds.includes(currentUser.id) || project.leadId === currentUser.id;
+           return (
+           <div key={project.id} className={`bg-white p-4 rounded-xl shadow-sm border ${isAssigned ? 'border-red-200 ring-2 ring-red-100' : 'border-slate-200'} flex flex-col gap-3`}>
               <div className="flex justify-between items-start">
                  <div className="flex-1 mr-2">
-                    <h3 className="font-bold text-slate-900 text-lg leading-tight mb-1">{project.name}</h3>
+                    <h3 className={`font-bold text-lg leading-tight mb-1 ${isAssigned ? 'text-red-700' : 'text-slate-900'}`}>{project.name}</h3>
                     <p className="text-xs text-slate-400 font-mono mb-1">{project.id}</p>
                  </div>
-                 <span className={`shrink-0 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${getStatusColor(project.status)}`}>
+                 <span className={`shrink-0 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border ${getStatusColor(project.status)}`}>
                     {project.status}
                  </span>
               </div>
               
               <div className="flex gap-2 my-1">
-                  <button onClick={() => handleOpenTeam(project)} className="flex-1 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-2 hover:bg-slate-100">
-                      <Icon name="fa-users" /> Equipo
+                  <button onClick={() => handleOpenTeam(project)} className={`flex-1 py-2 border rounded-lg text-xs font-bold flex items-center justify-center gap-2 ${isAssigned ? 'bg-red-50 border-red-200 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                      <Icon name="fa-users" /> {isAssigned ? 'Tu Equipo' : 'Equipo'}
                   </button>
                   <button onClick={() => handleOpenReq(project)} className="flex-1 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 flex items-center justify-center gap-2 hover:bg-slate-100">
                       <Icon name="fa-file-alt" /> Resumen
@@ -402,7 +456,7 @@ export const ProjectsView = ({
                  </div>
               </div>
            </div>
-        ))}
+        )})}
       </div>
       
       {/* Create/Edit Modal - OPTIMIZED */}
@@ -443,7 +497,7 @@ export const ProjectsView = ({
                     <div>
                         <label className="block text-xs font-bold text-slate-500 mb-1">Estado de Desarrollo</label>
                         <select 
-                            className="w-full border p-3 rounded-lg bg-slate-50"
+                            className="w-full border p-3 rounded-lg bg-slate-50 font-bold text-slate-700"
                             value={editProjectData.status}
                             onChange={e => setEditProjectData({...editProjectData, status: e.target.value as ProjectStatus})}
                         >
@@ -573,14 +627,33 @@ export const ProjectsView = ({
                       <button onClick={()=>setShowLogModal(false)} className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center hover:bg-slate-300"><Icon name="fa-times"/></button>
                   </div>
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-                    {selectedProject.logs?.length === 0 && <p className="text-center text-slate-400 mt-10">Sin registros.</p>}
-                    {selectedProject.logs?.map(log => (
+                    {/* Add Log Section */}
+                    <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <textarea 
+                            className="w-full border p-2 rounded text-sm mb-2" 
+                            placeholder="Escribe un nuevo hito o actualización..." 
+                            rows={3}
+                            value={newLogText}
+                            onChange={(e) => setNewLogText(e.target.value)}
+                        ></textarea>
+                        <button 
+                            onClick={handleAddLog}
+                            disabled={!newLogText.trim()}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded text-sm disabled:opacity-50 transition-colors"
+                        >
+                            + Agregar Entrada
+                        </button>
+                    </div>
+
+                    {/* Log List */}
+                    {selectedProject.logs?.length === 0 && <p className="text-center text-slate-400 mt-10">Sin registros anteriores.</p>}
+                    {[...(selectedProject.logs || [])].reverse().map(log => (
                         <div key={log.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <div className="flex justify-between text-xs text-slate-400 mb-2 uppercase font-bold tracking-wider">
-                                <span>{new Date(log.date).toLocaleDateString()}</span>
+                                <span>{new Date(log.date).toLocaleDateString()} {new Date(log.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                                 <span>{log.author}</span>
                             </div>
-                            <p className="text-slate-800 text-sm leading-relaxed">{log.text}</p>
+                            <p className="text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">{log.text}</p>
                             {log.link && (
                                 <a href={log.link} target="_blank" className="mt-2 text-xs text-blue-600 hover:underline flex items-center gap-1">
                                     <Icon name="fa-external-link-alt"/> Ver Archivo / Enlace
