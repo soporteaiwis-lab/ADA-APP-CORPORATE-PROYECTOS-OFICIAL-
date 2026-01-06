@@ -36,10 +36,19 @@ const getEnvVar = (key: string): string => {
   return '';
 };
 
+// --- CLAVES PÚBLICAS (HARDCODED) ---
+// REEMPLAZA ESTOS VALORES CON TUS CLAVES REALES PARA QUE FUNCIONE AUTOMÁTICAMENTE
+const HARDCODED_KEYS = {
+    GEMINI: "PEGAR_AQUI_TU_API_KEY_DE_GEMINI",
+    GITHUB: "PEGAR_AQUI_TU_TOKEN_GITHUB_PAT",
+    DRIVE_CLIENT_ID: "89422266816-meh16hnsdp10313n2uo94s5erqc2kri5.apps.googleusercontent.com" // Ya puse el ID de tu imagen
+};
+
 export const APP_CONFIG = {
-  GEMINI_API_KEY: getEnvVar('API_KEY'), 
-  GITHUB_TOKEN: getEnvVar('GITHUB_TOKEN'),
-  GOOGLE_CLIENT_ID: getEnvVar('GOOGLE_CLIENT_ID')
+  // Orden de prioridad: 1. Variable de Entorno/LocalStorage, 2. Hardcoded Key
+  GEMINI_API_KEY: getEnvVar('API_KEY') || HARDCODED_KEYS.GEMINI, 
+  GITHUB_TOKEN: getEnvVar('GITHUB_TOKEN') || HARDCODED_KEYS.GITHUB,
+  GOOGLE_CLIENT_ID: getEnvVar('GOOGLE_CLIENT_ID') || HARDCODED_KEYS.DRIVE_CLIENT_ID
 };
 
 // --- NUEVO EQUIPO ADA ---

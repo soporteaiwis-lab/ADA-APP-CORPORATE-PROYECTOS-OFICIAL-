@@ -23,11 +23,12 @@ export const Dashboard = ({ currentUser, projects }: { currentUser: User, projec
 
   // Settings Modal State
   const [showConfig, setShowConfig] = useState(false);
-  // UPDATED KEYS TO ADA PREFIX
+  
+  // UPDATED: Pre-fill with APP_CONFIG values (which now include hardcoded keys)
   const [manualKeys, setManualKeys] = useState({
-      apiKey: localStorage.getItem('ada_env_API_KEY') || '',
-      githubToken: localStorage.getItem('ada_env_GITHUB_TOKEN') || '',
-      googleClientId: localStorage.getItem('ada_env_GOOGLE_CLIENT_ID') || ''
+      apiKey: localStorage.getItem('ada_env_API_KEY') || APP_CONFIG.GEMINI_API_KEY || '',
+      githubToken: localStorage.getItem('ada_env_GITHUB_TOKEN') || APP_CONFIG.GITHUB_TOKEN || '',
+      googleClientId: localStorage.getItem('ada_env_GOOGLE_CLIENT_ID') || APP_CONFIG.GOOGLE_CLIENT_ID || ''
   });
 
   // ESC Listener
